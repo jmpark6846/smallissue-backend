@@ -1,4 +1,4 @@
 from .base import *
 
-ALLOWED_HOSTS = ['localhost', '0.0.0.0']
+ALLOWED_HOSTS = ['.smallissue-backend.eba-ab4pe3zw.us-west-2.elasticbeanstalk.com', ]
 DEBUG = False

@@ -6,3 +6,4 @@ WORKDIR /app
 
 RUN pip3 install pipenv
 RUN pipenv install --system --deploy --ignore-pipfile
+EXPOSE 8000
