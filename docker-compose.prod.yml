@@ -2,11 +2,11 @@ version: "3.9"
 services:
   web:
     build: .
-    command:
-      bash -c "python3 manage.py makemigrations
-      && python3 manage.py migrate
-      && python3 manage.py collectstatic --noinput
-      && ./wait-for-it.sh db:5432 -- gunicorn smallissue.wsgi:application -b 0.0.0.0:8000"
+    command: gunicorn smallissue.wsgi:application -b 0.0.0.0:8000
+#      bash -c "python3 manage.py makemigrations
+#      && python3 manage.py migrate
+#      && python3 manage.py collectstatic --noinput
+#      && "
     volumes:
       - .:/app
     ports:
