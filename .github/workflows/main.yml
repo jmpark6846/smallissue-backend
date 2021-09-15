@@ -18,8 +18,12 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v2
 
+      - name: Generate App Version
+        id: appversion
+        run: echo "::set-output name=version::app_$(date +'%y%m%d_%H%M%S')"
+
       - name: Generate deployment package
-        run: zip -r deploy.zip . -x '*.git*'
+        run: zip -r ${{ steps.appversion.outputs.version }}.zip . -x '*.git*'
 
       - name: Deploy to EB
         uses: einaregilsson/beanstalk-deploy@v18
@@ -28,6 +32,6 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: smallissue-backend
           environment_name: smallissue
-          version_label: 12345
+          version_label: ${{ steps.appversion.outputs.version }}
           region: ap-northeast-2
-          deployment_package: deploy.zip
+          deployment_package: ${{ steps.appversion.outputs.version }}.zip
