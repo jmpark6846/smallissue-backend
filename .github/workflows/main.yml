@@ -2,8 +2,6 @@ name: CI
 
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -35,7 +33,7 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: smallissue-backend
           environment_name: smallissue
-          version_description: ${{ github.event.pull_request }} # TODO: commit 으로 변경
+          version_description: ${{ github.sha }} # TODO: commit 으로 변경
           version_label: ${{ steps.appversion.outputs.version }}
           region: ap-northeast-2
           deployment_package: ${{ steps.appversion.outputs.version }}.zip
