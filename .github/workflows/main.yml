@@ -20,8 +20,15 @@ jobs:
 
       - name: Generate App Version
         id: appversion
-        run: echo "::set-output name=version::app_$(date +'%y%m%d_%H%M%S')"
+        run: echo "::set-output name=version::app_$(date +'%y%m%d_%I%M%S')"
 
+#      - name: Set short sha for version_description
+#        id: sha_short
+#        run: echo "::set-output name=sha_short::$(git rev-parse --short ${{github.event.pull_request.head.sha}})"
+
+      - name: Change compose production yml name
+        run: mv docker-compose.prod.yml docker-compose.yml
+        
       - name: Generate deployment package
         run: zip -r ${{ steps.appversion.outputs.version }}.zip . -x '*.git*'
 
@@ -32,6 +39,7 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: smallissue-backend
           environment_name: smallissue
+          version_description: ${{ gihtub.SHA }} # TODO: commit 으로 변경
           version_label: ${{ steps.appversion.outputs.version }}
           region: ap-northeast-2
           deployment_package: ${{ steps.appversion.outputs.version }}.zip
