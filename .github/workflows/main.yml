@@ -28,7 +28,7 @@ jobs:
 
       - name: Change compose production yml name
         run: mv docker-compose.prod.yml docker-compose.yml
-        
+
       - name: Generate deployment package
         run: zip -r ${{ steps.appversion.outputs.version }}.zip . -x '*.git*'
 
@@ -39,7 +39,7 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: smallissue-backend
           environment_name: smallissue
-          version_description: ${{ gihtub.SHA }} # TODO: commit 으로 변경
+          version_description: ${{ github.SHA }} # TODO: commit 으로 변경
           version_label: ${{ steps.appversion.outputs.version }}
           region: ap-northeast-2
           deployment_package: ${{ steps.appversion.outputs.version }}.zip
