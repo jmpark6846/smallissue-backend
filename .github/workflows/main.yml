@@ -16,15 +16,15 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v2
 
-      - name: Generate App Version
-        id: appversion
-        run: echo "::set-output name=version::app_$(TZ=Asia/Seoul date +'%y%m%d_%I%M%S')"
+      - name: Generate App Version Label
+        id: appversion_label
+        run: echo "::set-output name=label::app_$(TZ=Asia/Seoul date +'%y%m%d_%I%M%S')"
 
       - name: Change compose production yml name
         run: mv docker-compose.prod.yml docker-compose.yml
 
       - name: Generate deployment package
-        run: zip -r ${{ steps.appversion.outputs.version }}.zip . -x '*.git*'
+        run: zip -r ${{ steps.appversion_label.outputs.label }}.zip . -x '*.git*'
 
       - name: Deploy to EB
         uses: einaregilsson/beanstalk-deploy@v18
@@ -34,6 +34,6 @@ jobs:
           application_name: smallissue-backend
           environment_name: smallissue
           version_description: ${{ github.sha }} # TODO: commit 으로 변경
-          version_label: ${{ steps.appversion.outputs.version }}
+          version_label: ${{ steps.appversion_label.outputs.label }}
           region: ap-northeast-2
-          deployment_package: ${{ steps.appversion.outputs.version }}.zip
+          deployment_package: ${{ steps.appversion_label.outputs.label }}.zip
