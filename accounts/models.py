@@ -50,7 +50,7 @@ class User(AbstractUser):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User,
-                                on_delete=models.DO_NOTHING,
+                                on_delete=models.CASCADE,
                                 related_name='profile', )
     field = models.CharField(max_length=140, null=True, blank=True)
 
