@@ -9,9 +9,12 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from rest_framework.decorators import api_view
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from accounts.models import User
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
+
+
 
 
 class GoogleLogin(SocialLoginView):

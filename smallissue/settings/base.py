@@ -197,5 +197,6 @@ SIMPLE_JWT = {
 
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 REST_AUTH_SERIALIZERS = {
-    'USER_DETAILS_SERIALIZER': 'accounts.serializers.UserDetailSerializer'
+    'USER_DETAILS_SERIALIZER': 'accounts.serializers.UserDetailSerializer',
+    'JWT_TOKEN_CLAIMS_SERIALIZER': 'accounts.serializers.SITokenObtainSerializer'
 }
