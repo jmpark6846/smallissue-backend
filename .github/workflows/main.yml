@@ -29,7 +29,7 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: smallissue-backend
+          application_name: smallissue
           environment_name: smallissue
           version_description: ${{ github.sha }} # TODO: commit 으로 변경
           version_label: ${{ steps.appversion_label.outputs.label }}
