@@ -14,7 +14,7 @@ services:
   nginx:
     image: nginx
     volumes:
-    - .config/nginx:/etc/nginx/conf.d
+    - ./.config/nginx:/etc/nginx/conf.d
     - ./staticfiles:/app/staticfiles
     ports:
       - "80:80"
