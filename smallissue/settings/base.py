@@ -189,9 +189,9 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 # simple_jwt
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
+    'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
@@ -201,3 +201,4 @@ REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'accounts.serializers.UserDetailSerializer',
     'JWT_TOKEN_CLAIMS_SERIALIZER': 'accounts.serializers.SITokenObtainSerializer'
 }
+JWT_AUTH_RETURN_EXPIRATION = True
