@@ -14,9 +14,6 @@ from accounts.models import User
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
 
-
-
-
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
