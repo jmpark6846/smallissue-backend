@@ -16,6 +16,7 @@ services:
     volumes:
     - ./.config/nginx:/etc/nginx/conf.d
     - ./staticfiles:/app/staticfiles
+    - ./data/nginx/:/var/log/nginx/
     ports:
       - "80:80"
     depends_on:
