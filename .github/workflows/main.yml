@@ -20,9 +20,6 @@ jobs:
         id: appversion_label
         run: echo "::set-output name=label::app_$(TZ=Asia/Seoul date +'%y%m%d_%I%M%S')"
 
-      - name: Change compose production yml name
-        run: mv docker-compose.prod.yml docker-compose.yml
-
       - name: Generate deployment package
         run: zip -r ${{ steps.appversion_label.outputs.label }}.zip . -x '*.git*'
 
