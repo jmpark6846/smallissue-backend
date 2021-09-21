@@ -34,3 +34,4 @@ jobs:
           version_label: ${{ steps.appversion_label.outputs.label }}
           region: ap-northeast-2
           deployment_package: ${{ steps.appversion_label.outputs.label }}.zip
+          wait_for_environment_recovery: 60
