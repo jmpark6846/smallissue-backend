@@ -12,10 +12,6 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-from dotenv import find_dotenv, load_dotenv
-
-load_dotenv(find_dotenv())
-env = os.getenv('env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -188,15 +184,16 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 # simple_jwt
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=3),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'accounts.serializers.UserDetailSerializer',
 }
-JWT_AUTH_RETURN_EXPIRATION = True
+JWT_AUTH_RETURN_EXPIRATION = False
+JWT_AUTH_COOKIE = 'access'
+JWT_AUTH_REFRESH_COOKIE = 'refresh'
