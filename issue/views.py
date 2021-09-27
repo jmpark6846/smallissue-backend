@@ -1,7 +1,9 @@
 from django.shortcuts import render
+from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
-
+from rest_framework.response import Response
 from issue.models import Project
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly
 from issue.serializers import ProjectSerializer
@@ -22,3 +24,9 @@ class ProjectViewSet(ModelViewSet):
     def get_queryset(self):
         # return Project.objects.all()
         return self.request.user.projects.order_by('-created_at')
+
+
+@api_view(['GET'])
+def check_project_key_available(request: Request):
+    key = request.query_params.get('key')
+    return Response(data={'available': not request.user.projects.filter(key=key).exists()})

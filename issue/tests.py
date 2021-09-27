@@ -31,9 +31,27 @@ class ProjectTestCase(APITestCase):
             'leader': self.user.pk,
             'users': [self.user.pk]
         }
-        res = self.client.post(f'/projects/', data);
-        self.assertEqual(res.status_code, 401);
+        res = self.client.post(f'/projects/', data)
+        self.assertEqual(res.status_code, 401)
 
         self.login(self.user)
-        res = self.client.post(f'/projects/', data);
-        self.assertEqual(res.status_code, 201);
+        res = self.client.post(f'/projects/', data)
+        self.assertEqual(res.status_code, 201)
+
+    def test_한유저내_프로젝트키값은_달라야한다(self):
+        project = Project.objects.create(
+            name='project1',
+            key='PJ',
+            leader=self.user,
+        )
+        self.user.projects.add(project)
+        
+        data = {
+            'name': 'project2',
+            'key': 'PJ',
+            'leader': self.user.pk,
+            'users': [self.user.pk]
+        }
+        self.login(self.user)
+        res = self.client.post(f'/projects/', data)
+        self.assertEqual(res.status_code, 400)
