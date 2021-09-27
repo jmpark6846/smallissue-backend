@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-
+from issue.urls import urlpatterns as issue_urls
 
 urlpatterns = [
    path('admin/', admin.site.urls),
@@ -28,4 +28,4 @@ urlpatterns = [
    # social login
    # path('accounts/google/login/', GoogleLogin.as_view(), name="google_login"),
    # path('accounts/kakao/login/', kakao_login, name='kakao_login'),
-]
+] + issue_urls

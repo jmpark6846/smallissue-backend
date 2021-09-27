@@ -13,6 +13,7 @@ dj-rest-auth = "*"
 django-allauth = "*"
 djangorestframework-simplejwt = "*"
 django-cors-headers = "*"
+pendulum = "*"
 
 [dev-packages]
 

@@ -1,3 +1,4 @@
+import pendulum
 from django.db import models
 from django.utils import timezone
 
@@ -12,7 +13,7 @@ class BaseModel(models.Model):
         abstract = True
 
     def delete(self, using=None, keep_parents=False):
-        self.deleted_at = timezone.localtime()
+        self.deleted_at = pendulum.now()
         super(BaseModel, self).save()
 
     @property
