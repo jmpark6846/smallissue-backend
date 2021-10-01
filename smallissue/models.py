@@ -18,4 +18,4 @@ class BaseModel(models.Model):
 
     @property
     def is_deleted(self):
-        return self.deleted_at == None
+        return self.deleted_at is None

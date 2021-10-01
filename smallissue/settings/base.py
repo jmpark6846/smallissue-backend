@@ -172,7 +172,6 @@ REST_FRAMEWORK = {
 }
 REST_USE_JWT = True
 
-
 # django-allauth
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True

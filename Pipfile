@@ -14,6 +14,7 @@ django-allauth = "*"
 djangorestframework-simplejwt = "*"
 django-cors-headers = "*"
 pendulum = "*"
+drf-nested-routers = "*"
 
 [dev-packages]
 
