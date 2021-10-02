@@ -9,7 +9,7 @@ project_router = routers.NestedSimpleRouter(router, r'projects', lookup='project
 project_router.register(r'issues', ProjectIssueViewSet, basename='project-issues')
 
 urlpatterns = [
+    path('projects/check_project_key_available/', check_project_key_available), # router url 보다 상위에 올 것
     path(r'', include(router.urls)),
     path(r'', include(project_router.urls)),
-    path('projects/check_project_key_available/', check_project_key_available)
 ]
