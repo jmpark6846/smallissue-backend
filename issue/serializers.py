@@ -6,7 +6,6 @@ from issue.models import Project, Issue
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Project
         fields = '__all__'
@@ -26,21 +25,6 @@ class ProjectUserSerializer(serializers.ModelSerializer):
 
 
 class IssueSerializer(serializers.ModelSerializer):
-    assignee = serializers.SerializerMethodField()
-    key = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = Issue
-        fields='__all__'
-
-    def get_assignee(self, obj):
-        if not obj.assignee:
-            return None
-
-        return ProjectAssigneeListSerializer(obj.assignee).data
-
-
-class IssueUpdateSerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
 
     class Meta:
@@ -50,11 +34,11 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         result = super().to_representation(instance)
         assignee_id = result['assignee']
-        User = get_user_model()
 
         if assignee_id:
+            User = get_user_model()
             assignee = User.objects.get(id=assignee_id)
-            result['assignee'] = ProjectAssigneeListSerializer(assignee).data
+            result['assignee'] = {'id': assignee_id, 'username': assignee.username}
         else:
             result['assignee'] = None
 
@@ -68,14 +52,21 @@ class ProjectAssigneeListSerializer(serializers.Serializer):
 
 class IssueDetailSerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
-    assignee = serializers.SerializerMethodField()
 
     class Meta:
         model = Issue
         fields = '__all__'
 
-    def get_assignee(self, obj):
-        if not obj.assignee:
-            return None
+    def to_representation(self, instance):
+        result = super(IssueDetailSerializer, self).to_representation(instance)
+        result['project'] = {'name': instance.project.name, 'id': instance.project.id}
+        assignee_id = result['assignee']
 
-        return ProjectAssigneeListSerializer(obj.assignee).data
+        if assignee_id:
+            User = get_user_model()
+            assignee = User.objects.get(id=assignee_id)
+            result['assignee'] = ProjectAssigneeListSerializer(assignee).data
+        else:
+            result['assignee'] = None
+
+        return result

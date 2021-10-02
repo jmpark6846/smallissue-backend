@@ -1,5 +1,7 @@
 from django.shortcuts import render
+from rest_framework import status
 from rest_framework.decorators import api_view, action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
@@ -8,7 +10,7 @@ from rest_framework.response import Response
 from issue.models import Project, Issue
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    IssueUpdateSerializer, ProjectAssigneeListSerializer
+    ProjectAssigneeListSerializer
 
 
 class ProjectViewSet(ModelViewSet):
@@ -58,9 +60,21 @@ class ProjectIssueViewSet(ModelViewSet):
         return Issue.objects.filter(project=self.kwargs['project_pk'], deleted_at=None).order_by('created_at')
 
     def get_serializer_class(self):
-        if self.action in ['retrieve']:
+        if self.action in ['retrieve', 'update']:
             return IssueDetailSerializer
-        elif self.action in ['update']:
-            return IssueUpdateSerializer
         return IssueSerializer
-
+    #
+    # @action(detail=True, methods=['patch'])
+    # def update_from_list(self, request, **kwargs):
+    #     issue = self.get_object()
+    #     serializer = IssueUpdateFromListSerializer(issue, data=request.data, partial=True)
+    #     print(request.data)
+    #
+    #     try:
+    #         serializer.is_valid(raise_exception=True)
+    #         print(serializer.validated_data)
+    #         serializer.save()
+    #     except ValidationError:
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #
+    #     return Response(serializer.data)
