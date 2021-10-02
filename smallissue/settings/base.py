@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
-print(os.getenv('POSTGRES_HOST'))
+
 
 # Application definition
 
@@ -146,7 +146,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://api.smallissue.app/',
     'https://smallissue-frontend-jmpark6846.vercel.app',
     'https://smallissue-frontend.vercel.app',
     'https://smallissue.app',
