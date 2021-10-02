@@ -5,10 +5,13 @@ import sys
 
 
 def main():
-    """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'smallissue.settings.local')
     from dotenv import find_dotenv, load_dotenv
     load_dotenv(find_dotenv())
+
+    if os.getenv('env') == 'dev':
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'smallissue.settings.local')
+    else:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'smallissue.settings.production')
 
     try:
         from django.core.management import execute_from_command_line
