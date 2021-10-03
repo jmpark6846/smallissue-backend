@@ -30,15 +30,16 @@ class IssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = '__all__'
+        
+    def create(self, validated_data):
+        validated_data['order'] = Issue.objects.count()
+        return super(IssueSerializer, self).create(validated_data)
 
     def to_representation(self, instance):
         result = super().to_representation(instance)
-        assignee_id = result['assignee']
 
-        if assignee_id:
-            User = get_user_model()
-            assignee = User.objects.get(id=assignee_id)
-            result['assignee'] = {'id': assignee_id, 'username': assignee.username}
+        if instance.assignee:
+            result['assignee'] = {'id': instance.assignee.id, 'username': instance.assignee.username}
         else:
             result['assignee'] = None
 
@@ -60,12 +61,9 @@ class IssueDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         result = super(IssueDetailSerializer, self).to_representation(instance)
         result['project'] = {'name': instance.project.name, 'id': instance.project.id}
-        assignee_id = result['assignee']
 
-        if assignee_id:
-            User = get_user_model()
-            assignee = User.objects.get(id=assignee_id)
-            result['assignee'] = ProjectAssigneeListSerializer(assignee).data
+        if instance.assignee:
+            result['assignee'] = {'id': instance.assignee.id, 'username': instance.assignee.username}
         else:
             result['assignee'] = None
 

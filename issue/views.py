@@ -57,24 +57,22 @@ class ProjectIssueViewSet(ModelViewSet):
     permission_classes = [ProjectTeammateOnly, IsAuthenticated]
 
     def get_queryset(self):
-        return Issue.objects.filter(project=self.kwargs['project_pk'], deleted_at=None).order_by('created_at')
+        return Issue.objects.filter(project=self.kwargs['project_pk'], deleted_at=None).order_by('order')
 
     def get_serializer_class(self):
         if self.action in ['retrieve', 'update']:
             return IssueDetailSerializer
         return IssueSerializer
-    #
-    # @action(detail=True, methods=['patch'])
-    # def update_from_list(self, request, **kwargs):
-    #     issue = self.get_object()
-    #     serializer = IssueUpdateFromListSerializer(issue, data=request.data, partial=True)
-    #     print(request.data)
-    #
-    #     try:
-    #         serializer.is_valid(raise_exception=True)
-    #         print(serializer.validated_data)
-    #         serializer.save()
-    #     except ValidationError:
-    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #
-    #     return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'])
+    def set_orders(self, request, **kwargs):
+        issues = self.get_queryset()
+        new_orders = {}
+        for i, id in enumerate(request.data.get('new_orders')):
+            new_orders[int(id)] = i
+
+        for issue in issues:
+            issue.order = new_orders[issue.id]
+            issue.save()
+
+        return Response(status=200)

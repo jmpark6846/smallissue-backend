@@ -24,8 +24,11 @@ class Issue(BaseModel):
     status = models.SmallIntegerField(choices=STATUS.choices, default=STATUS.TODO)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
 
+    order = models.PositiveSmallIntegerField(null=True)
+
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if not self.key:
             new_count = Issue.objects.filter(project=self.project).count() + 1
             self.key = self.project.key+ '-' + str(new_count)
+
         super().save(force_insert, force_update, using, update_fields)
