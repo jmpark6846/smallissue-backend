@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from issue.models import Issue, Project
+from issue.models import Issue, Project, Comment
 
 
 class ProjectTeammateOnly(BasePermission):
@@ -17,3 +17,7 @@ class ProjectLeaderOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.leader == request.user
 
+
+class IsAuthorOnly(BasePermission):
+    def has_object_permission(self, request, view, obj: Comment):
+        return obj.author == request.user

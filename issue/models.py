@@ -8,6 +8,7 @@ class Project(BaseModel):
     name = models.CharField(max_length=128)
     leader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='projects_leading')
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects')
+    order = models.PositiveSmallIntegerField(null=True)
 
 
 class Issue(BaseModel):
@@ -32,3 +33,9 @@ class Issue(BaseModel):
             self.key = self.project.key+ '-' + str(new_count)
 
         super().save(force_insert, force_update, using, update_fields)
+
+
+class Comment(BaseModel):
+    content = models.TextField()
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='issue_comments')

@@ -8,9 +8,9 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
 from issue.models import Project, Issue
-from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly
+from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    ProjectAssigneeListSerializer
+    ProjectAssigneeListSerializer, CommentSerializer
 
 
 class ProjectViewSet(ModelViewSet):
@@ -21,18 +21,31 @@ class ProjectViewSet(ModelViewSet):
             permission_classes = [ProjectTeammateOnly, IsAuthenticated]
         elif self.action == 'create':
             permission_classes = [IsAuthenticated]
-        elif self.action in ['destroy', 'update', 'partial_update']:
+        elif self.action in ['destroy', 'update', 'set_orders']:
             permission_classes = [ProjectLeaderOnly, IsAuthenticated]
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        return self.request.user.projects.order_by('-created_at')
+        return self.request.user.projects.order_by('order')
 
     @action(detail=True, methods=['get'])
     def users(self, request, pk=None):
         project = self.get_object()
         users = ProjectAssigneeListSerializer(project.users, many=True).data
         return Response({'users': users})
+
+    @action(detail=False, methods=['patch'])
+    def set_orders(self, request, **kwargs):
+        projects = self.get_queryset()
+        new_orders = {}
+        for i, id in enumerate(request.data.get('new_orders')):
+            new_orders[int(id)] = i
+
+        for project in projects:
+            project.order = new_orders[project.id]
+            project.save()
+
+        return Response(status=200)
 
 
 @api_view(['GET'])
@@ -76,3 +89,19 @@ class ProjectIssueViewSet(ModelViewSet):
             issue.save()
 
         return Response(status=200)
+
+
+class ProjectCommentViewSet(ModelViewSet):
+    serializer_class = CommentSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+        elif self.action == 'create':
+            permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+        elif self.action in ['destroy', 'update', 'partial_update']:
+            permission_classes = [IsAuthorOnly, IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by('-created_at')

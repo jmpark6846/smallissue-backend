@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.serializers import UserDetailSerializer
-from issue.models import Project, Issue
+from issue.models import Project, Issue, Comment
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -16,6 +16,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('key not available')
 
         return data
+
+    def create(self, validated_data):
+        validated_data['order'] = Project.objects.count()
+        return super(ProjectSerializer, self).create(validated_data)
 
 
 class ProjectUserSerializer(serializers.ModelSerializer):
@@ -67,4 +71,15 @@ class IssueDetailSerializer(serializers.ModelSerializer):
         else:
             result['assignee'] = None
 
+        return result
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = '__all__'
+
+    def to_representation(self, instance: Comment):
+        result = super(CommentSerializer, self).to_representation(instance)
+        result['author'] = {'id': instance.author.pk, 'username': instance.author.username}
         return result
