@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Model
 from django.shortcuts import render
+from django.core.paginator import Paginator
+
 from rest_framework import status
 from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import ValidationError
@@ -11,6 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
 from issue.models import Project, Issue
+from issue.pagination import CommentPagination
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
     ProjectAssigneeListSerializer, CommentSerializer
@@ -78,6 +81,7 @@ def get_or_none_if_pk_is_none(model: Model, pk):
 
 class ProjectIssueViewSet(ModelViewSet):
     permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+    HISTORY_PAGINATION_SIZE = 10
 
     def get_queryset(self):
         return Issue.objects.filter(project=self.kwargs['project_pk'], deleted_at=None).order_by('order')
@@ -105,8 +109,13 @@ class ProjectIssueViewSet(ModelViewSet):
         User = get_user_model()
         issue = self.get_object()
         result = []
-        histories = issue.history.order_by('-history_date').all()
-        for h in histories:
+        histories = issue.history.order_by('-history_date')
+
+        paginator = Paginator(histories, self.HISTORY_PAGINATION_SIZE)
+        history_page_num = request.GET.get('history_page')
+        page_obj = paginator.get_page(history_page_num)
+
+        for h in page_obj.object_list:
             if h.prev_record:
                 delta = h.diff_against(h.prev_record, excluded_fields=['order', 'project', ])
                 for change in delta.changes:
@@ -138,11 +147,13 @@ class ProjectIssueViewSet(ModelViewSet):
                     'type': h.history_type,
                     'date': h.history_date,
                 })
-        return Response(data={'result': result}, status=200)
+
+        return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE, 'current_page': page_obj.number }, status=200)
 
 
 class ProjectCommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
+    pagination_class = CommentPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
