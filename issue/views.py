@@ -1,3 +1,6 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db.models import Model
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view, action
@@ -66,6 +69,13 @@ def check_project_key_available(request: Request):
     return Response(data={'available': True})
 
 
+def get_or_none_if_pk_is_none(model: Model, pk):
+    if pk is None:
+        return None
+
+    return model.objects.get(pk=pk)
+
+
 class ProjectIssueViewSet(ModelViewSet):
     permission_classes = [ProjectTeammateOnly, IsAuthenticated]
 
@@ -90,6 +100,46 @@ class ProjectIssueViewSet(ModelViewSet):
 
         return Response(status=200)
 
+    @action(detail=True, methods=['GET'])
+    def history(self, request, **kwargs):
+        User = get_user_model()
+        issue = self.get_object()
+        result = []
+        histories = issue.history.order_by('-history_date').all()
+        for h in histories:
+            if h.prev_record:
+                delta = h.diff_against(h.prev_record, excluded_fields=['order', 'project', ])
+                for change in delta.changes:
+                    data = {
+                        'field': change.field,
+                        'user': {'id': h.history_user.id, 'username': h.history_user.username},
+                        'type': h.history_type,
+                        'date': h.history_date,
+                    }
+                    if change.field == 'assignee':
+                        old_assignee = get_or_none_if_pk_is_none(User, change.old)
+                        new_assignee = get_or_none_if_pk_is_none(User, change.new)
+                        data['old_value'] = {'id': change.old,
+                                             'username': old_assignee.username if old_assignee else None}
+                        data['new_value'] = {'id': change.new,
+                                             'username': new_assignee.username if new_assignee else None}
+                    else:
+                        data['old_value'] = change.old
+                        data['new_value'] = change.new
+
+                    result.append(data)
+
+            else:
+                result.append({
+                    'field': None,
+                    'old_value': None,
+                    'new_value': None,
+                    'user': {'id': h.history_user.id, 'username': h.history_user.username},
+                    'type': h.history_type,
+                    'date': h.history_date,
+                })
+        return Response(data={'result': result}, status=200)
+
 
 class ProjectCommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
@@ -104,4 +154,5 @@ class ProjectCommentViewSet(ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by('-created_at')
+        return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by(
+            '-created_at')

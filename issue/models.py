@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from simple_history.models import HistoricalRecords
 from smallissue.models import BaseModel
 
 
@@ -9,6 +10,9 @@ class Project(BaseModel):
     leader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='projects_leading')
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects')
     order = models.PositiveSmallIntegerField(null=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Issue(BaseModel):
@@ -24,15 +28,19 @@ class Issue(BaseModel):
                                  null=True)
     status = models.SmallIntegerField(choices=STATUS.choices, default=STATUS.TODO)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
-
     order = models.PositiveSmallIntegerField(null=True)
+    history = HistoricalRecords()
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if not self.key:
             new_count = Issue.objects.filter(project=self.project).count() + 1
-            self.key = self.project.key+ '-' + str(new_count)
+            self.key = self.project.key + '-' + str(new_count)
 
         super().save(force_insert, force_update, using, update_fields)
+
+    def __str__(self):
+        return '#{}: {}'.format(self.id, self.title)
+
 
 
 class Comment(BaseModel):
