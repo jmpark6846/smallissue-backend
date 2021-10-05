@@ -10,13 +10,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = '__all__'
 
-    def validate(self, data):
-        user = data['leader']
-        if user.projects.filter(key=data['key']).exists():
-            raise serializers.ValidationError('key not available')
-
-        return data
-
     def create(self, validated_data):
         validated_data['order'] = Project.objects.count()
         return super(ProjectSerializer, self).create(validated_data)

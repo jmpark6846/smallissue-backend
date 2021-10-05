@@ -10,7 +10,7 @@ from django.core.paginator import Paginator
 from rest_framework import status
 from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -26,12 +26,15 @@ class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectSerializer
 
     def get_permissions(self):
+        print(self.action)
         if self.action in ['list', 'retrieve', 'users']:
             permission_classes = [ProjectTeammateOnly, IsAuthenticated]
         elif self.action == 'create':
             permission_classes = [IsAuthenticated]
         elif self.action in ['destroy', 'update', 'set_orders']:
             permission_classes = [ProjectLeaderOnly, IsAuthenticated]
+        else:
+            permission_classes = [IsAdminUser]
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
@@ -75,11 +78,6 @@ def check_project_key_available(request: Request):
     return Response(data={'available': True})
 
 
-def get_or_none_if_pk_is_none(model: Model, pk):
-    if pk is None:
-        return None
-
-    return model.objects.get(pk=pk)
 
 
 class ProjectIssueViewSet(ModelViewSet):

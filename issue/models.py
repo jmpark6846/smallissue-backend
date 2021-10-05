@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from notifications.signals import notify
 
 from django.conf import settings
@@ -6,7 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models.signals import post_save
 from simple_history.models import HistoricalRecords
+
 from smallissue.models import BaseModel
+from smallissue.utils import get_or_none_if_pk_is_none
 
 
 class Project(BaseModel):
@@ -92,6 +95,61 @@ class IssueHistory(models.Model):
         ordering = ['-history_date']
 
 
+def get_change_from_histories(histories):
+    User = get_user_model()
+    result = []
+    for issue_history in histories:
+        history = issue_history.history
+        if history.__class__ == Issue.history.model:
+            if history.prev_record:
+                delta = history.diff_against(history.prev_record, excluded_fields=['order', 'project', ])
+                for change in delta.changes:
+                    if change.field == 'key':
+                        continue
+
+                    data = {
+                        'field': change.field,
+                        'user': {'id': history.history_user.id, 'username': history.history_user.username},
+                        'type': history.history_type,
+                        'date': history.history_date,
+                    }
+                    if change.field == 'assignee':
+                        old_assignee = get_or_none_if_pk_is_none(User, change.old)
+                        new_assignee = get_or_none_if_pk_is_none(User, change.new)
+                        data['old_value'] = {'id': change.old,
+                                             'username': old_assignee.username if old_assignee else None}
+                        data['new_value'] = {'id': change.new,
+                                             'username': new_assignee.username if new_assignee else None}
+                    else:
+                        data['old_value'] = change.old
+                        data['new_value'] = change.new
+
+                    result.append(data)
+            else:
+                result.append({
+                    'field': None,
+                    'old_value': None,
+                    'new_value': None,
+                    'user': {'id': history.history_user.id, 'username': history.history_user.username},
+                    'type': history.history_type,
+                    'date': history.history_date,
+                })
+        elif history.__class__ == IssueTagging.history.model:
+            result.append({
+                'field': 'tags',
+                'old_value': None,
+                'new_value': history.tag.name,
+                'user': {'id': history.history_user.id, 'username': history.history_user.username},
+                'type': history.history_type,
+                'date': history.history_date
+            })
+        else:
+            raise TypeError('이슈와 이슈태깅 히스토리컬 모델이 아닙니다.')
+
+    return result
+
+from dj_rest_auth.views import LogoutView
+
 def notify_issue_changes(sender, instance, created, **kwargs):
     issue = Issue.objects.get(id=instance.issue_id)
     actor = instance.history.history_user
@@ -100,24 +158,27 @@ def notify_issue_changes(sender, instance, created, **kwargs):
     if not issue_subscribers.exists():
         return
 
-    h = instance.history
+    change = get_change_from_histories([instance])[0]
 
+    h = instance.history
     if h.__class__ == Issue.history.model:  # HistoricalIssue
         if h.history_type == "+":
-            description = "이슈가 생성되었습니다."
+            description = "이슈를 생성했습니다."
             verb = "생성"
         elif h.history_type == "-":
-            description = "이슈가 삭제되었습니다."
+            description = "이슈를 삭제했습니다."
             verb = "삭제"
         else:  # h.history_type == "~"
-            description = "이슈가 업데이트 되었습니다."
+            description = "이슈를 업데이트헀습니다."
             verb = "업데이트"
     else:  # HistoricalIssueTagging, 태그는 추가, 삭제 모두 이슈 업데이트로 알림.
-        description = "이슈가 업데이트 되었습니다."
+        description = "이슈를 업데이트했습니다."
         verb = "업데이트"
 
+    issue_data = {'id': issue.id, 'title': issue.title, 'project_id': issue.project.id, 'change': change}
+
     notify.send(actor, recipient=issue_subscribers, verb=verb, target=instance,
-                description=description)
+                description=description,issue=issue_data)
 
 
 post_save.connect(notify_issue_changes, sender=IssueHistory)
