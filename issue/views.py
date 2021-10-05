@@ -1,6 +1,9 @@
+from itertools import chain
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.forms.models import model_to_dict
 from django.shortcuts import render
 from django.core.paginator import Paginator
 
@@ -12,11 +15,11 @@ from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
-from issue.models import Project, Issue
+from issue.models import Project, Issue, Tag, IssueTagging
 from issue.pagination import CommentPagination
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    ProjectAssigneeListSerializer, CommentSerializer
+    ProjectAssigneeListSerializer, CommentSerializer, TagSerializer
 
 
 class ProjectViewSet(ModelViewSet):
@@ -79,6 +82,41 @@ def get_or_none_if_pk_is_none(model: Model, pk):
     return model.objects.get(pk=pk)
 
 
+def get_fields_from_model(model):
+    model_field_names = list(set(chain.from_iterable(
+        (field.name, field.attname) if hasattr(field, 'attname') else (field.name,)
+        for field in model._meta.get_fields()
+        # For complete backwards compatibility, you may want to exclude
+        # GenericForeignKey from the results.
+        if not (field.many_to_one and field.related_model is None)
+    )))
+    return model_field_names
+
+#
+# def create_historical_record_manually(instance, history_dict):
+#     model = type(instance)
+#     model_field_names = get_fields_from_model(model)
+#     history_model = model.history.model
+#
+#     model_attr_dict = {
+#
+#     }
+#
+#     for field_name in model_field_names:
+#
+#
+#     new_historical_record = model.objects.create(
+#         **
+#     )
+#
+#     history_dict = dict(
+#         history_user = self.request.user,
+#         history_date = timezone.now(),
+#         history_change_reason = '',
+#         history_type = '~',
+#
+#     )
+
 class ProjectIssueViewSet(ModelViewSet):
     permission_classes = [ProjectTeammateOnly, IsAuthenticated]
     HISTORY_PAGINATION_SIZE = 10
@@ -104,13 +142,54 @@ class ProjectIssueViewSet(ModelViewSet):
 
         return Response(status=200)
 
+    @action(detail=True, methods=['GET', 'POST'])
+    def tags(self, request: Request, **kwargs):
+        if request.method == 'POST':
+            issue = self.get_object()
+            tag_name_inputs: list = request.data.get('tags')
+            is_adding_tag = len(tag_name_inputs) > issue.tags.count()
+
+            if is_adding_tag:
+                for tag_input in tag_name_inputs:
+                    if not issue.tags.filter(name=tag_input).exists():
+                        tag = Tag.objects.create(
+                            name=tag_input,
+                        )
+                        IssueTagging.objects.create(
+                            tag=tag,
+                            issue=issue,
+                        )
+
+                        # tag.issues.add(issue)
+            else:
+                deleted = issue.tags.exclude(name__in=tag_name_inputs).all()
+                for tag in deleted:
+                    IssueTagging.objects.get(
+                        issue=issue,
+                        tag=tag
+                    ).delete()
+                    # issue.tags.remove(tag)
+
+            tag_names = []
+            qs = issue.tags.all()
+            for tag in qs:
+                tag_names.append(tag.name)
+            return Response(data={'tags': tag_names}, status=200)
+        else:
+            issue = self.get_object()
+            tag_names = []
+            qs = issue.tags.all()
+            for tag in qs:
+                tag_names.append(tag.name)
+            return Response(data={'tags': tag_names}, status=200)
+
     @action(detail=True, methods=['GET'])
     def history(self, request, **kwargs):
         User = get_user_model()
         issue = self.get_object()
         result = []
         histories = issue.history.order_by('-history_date')
-
+        tag_histories = IssueTagging.history.filter(issue=issue).order_by('-history_date')
         paginator = Paginator(histories, self.HISTORY_PAGINATION_SIZE)
         history_page_num = request.GET.get('history_page')
         page_obj = paginator.get_page(history_page_num)
@@ -148,7 +227,8 @@ class ProjectIssueViewSet(ModelViewSet):
                     'date': h.history_date,
                 })
 
-        return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE, 'current_page': page_obj.number }, status=200)
+        return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE,
+                              'current_page': page_obj.number}, status=200)
 
 
 class ProjectCommentViewSet(ModelViewSet):
@@ -167,3 +247,17 @@ class ProjectCommentViewSet(ModelViewSet):
     def get_queryset(self):
         return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by(
             '-created_at')
+
+#
+#
+# @api_view(['GET'])
+# def get_or_create_tags(request):
+#     if request.method == 'GET':
+#         tag_name = request.GET.get('tag')
+#
+#         tag = Tag.objects.get_or_create(
+#             tag_name = tag_name,
+#             issue=
+#         )
+#     else:
+#         return Response(status=405)

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.serializers import UserDetailSerializer
-from issue.models import Project, Issue, Comment
+from issue.models import Project, Issue, Comment, Tag
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -66,12 +66,24 @@ class IssueDetailSerializer(serializers.ModelSerializer):
         result = super(IssueDetailSerializer, self).to_representation(instance)
         result['project'] = {'name': instance.project.name, 'id': instance.project.id}
 
+        tag_names = []
+        qs = instance.tags.all()
+        for tag in qs:
+            tag_names.append(tag.name)
+        result['tags'] = tag_names
+
         if instance.assignee:
             result['assignee'] = {'id': instance.assignee.id, 'username': instance.assignee.username}
         else:
             result['assignee'] = None
 
         return result
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['name']
 
 
 class CommentSerializer(serializers.ModelSerializer):

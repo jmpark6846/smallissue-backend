@@ -5,7 +5,7 @@ from rest_framework.response import Response
 class CommentPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'comment_page_num'
-    
+
     def get_paginated_response(self, data):
         return Response({
             'count': self.page.paginator.count,

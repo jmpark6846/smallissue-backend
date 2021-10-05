@@ -29,6 +29,8 @@ class Issue(BaseModel):
     status = models.SmallIntegerField(choices=STATUS.choices, default=STATUS.TODO)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
     order = models.PositiveSmallIntegerField(null=True)
+    tags = models.ManyToManyField('issue.Tag', related_name='issues', through='IssueTagging',
+                                  through_fields=('issue', 'tag'))
     history = HistoricalRecords()
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
@@ -47,3 +49,13 @@ class Comment(BaseModel):
     content = models.TextField()
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='issue_comments')
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=30)
+
+
+class IssueTagging(models.Model):
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
+    history = HistoricalRecords()
