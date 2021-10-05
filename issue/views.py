@@ -15,7 +15,7 @@ from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
-from issue.models import Project, Issue, Tag, IssueTagging
+from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory
 from issue.pagination import CommentPagination
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
@@ -160,7 +160,6 @@ class ProjectIssueViewSet(ModelViewSet):
                             issue=issue,
                         )
 
-                        # tag.issues.add(issue)
             else:
                 deleted = issue.tags.exclude(name__in=tag_name_inputs).all()
                 for tag in deleted:
@@ -168,7 +167,6 @@ class ProjectIssueViewSet(ModelViewSet):
                         issue=issue,
                         tag=tag
                     ).delete()
-                    # issue.tags.remove(tag)
 
             tag_names = []
             qs = issue.tags.all()
@@ -188,44 +186,59 @@ class ProjectIssueViewSet(ModelViewSet):
         User = get_user_model()
         issue = self.get_object()
         result = []
-        histories = issue.history.order_by('-history_date')
-        tag_histories = IssueTagging.history.filter(issue=issue).order_by('-history_date')
+        histories = IssueHistory.objects.filter(issue=issue)
         paginator = Paginator(histories, self.HISTORY_PAGINATION_SIZE)
         history_page_num = request.GET.get('history_page')
         page_obj = paginator.get_page(history_page_num)
 
-        for h in page_obj.object_list:
-            if h.prev_record:
-                delta = h.diff_against(h.prev_record, excluded_fields=['order', 'project', ])
-                for change in delta.changes:
-                    data = {
-                        'field': change.field,
+        for issue_history in page_obj.object_list:
+            h = issue_history.history
+
+            if h.__class__ == Issue.history.model:
+                if h.prev_record:
+                    delta = h.diff_against(h.prev_record, excluded_fields=['order', 'project', ])
+                    for change in delta.changes:
+                        data = {
+                            'field': change.field,
+                            'user': {'id': h.history_user.id, 'username': h.history_user.username},
+                            'type': h.history_type,
+                            'date': h.history_date,
+                        }
+                        if change.field == 'assignee':
+                            old_assignee = get_or_none_if_pk_is_none(User, change.old)
+                            new_assignee = get_or_none_if_pk_is_none(User, change.new)
+                            data['old_value'] = {'id': change.old,
+                                                 'username': old_assignee.username if old_assignee else None}
+                            data['new_value'] = {'id': change.new,
+                                                 'username': new_assignee.username if new_assignee else None}
+                        else:
+                            data['old_value'] = change.old
+                            data['new_value'] = change.new
+
+                        result.append(data)
+
+                else:
+                    result.append({
+                        'field': None,
+                        'old_value': None,
+                        'new_value': None,
                         'user': {'id': h.history_user.id, 'username': h.history_user.username},
                         'type': h.history_type,
                         'date': h.history_date,
-                    }
-                    if change.field == 'assignee':
-                        old_assignee = get_or_none_if_pk_is_none(User, change.old)
-                        new_assignee = get_or_none_if_pk_is_none(User, change.new)
-                        data['old_value'] = {'id': change.old,
-                                             'username': old_assignee.username if old_assignee else None}
-                        data['new_value'] = {'id': change.new,
-                                             'username': new_assignee.username if new_assignee else None}
-                    else:
-                        data['old_value'] = change.old
-                        data['new_value'] = change.new
-
-                    result.append(data)
-
-            else:
+                    })
+            elif h.__class__ == IssueTagging.history.model:
                 result.append({
-                    'field': None,
+                    'field': 'tags',
                     'old_value': None,
-                    'new_value': None,
+                    'new_value': h.tag.name,
                     'user': {'id': h.history_user.id, 'username': h.history_user.username},
                     'type': h.history_type,
-                    'date': h.history_date,
+                    'date': h.history_date
                 })
+            else:
+                raise TypeError('이슈와 이슈태깅 히스토리컬 모델이 아닙니다.')
+
+
 
         return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE,
                               'current_page': page_obj.number}, status=200)

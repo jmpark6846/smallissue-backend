@@ -65,8 +65,9 @@ class IssueTagging(models.Model):
 
 class IssueHistory(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
+    history_id = models.PositiveIntegerField()
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
+    history = GenericForeignKey('content_type', 'history_id')
     history_date = models.DateTimeField(null=True)
 
     class Meta:
@@ -75,17 +76,26 @@ class IssueHistory(models.Model):
 
 def create_issue_history(sender, instance, created, **kwargs):
     content_type = ContentType.objects.get_for_model(instance)
+
+    if sender == Issue.history.model:
+        issue_id = instance.id
+    elif sender == IssueTagging.history.model:
+        issue_id = instance.issue_id
+    else:
+        raise TypeError('이슈와 이슈태깅 히스토리컬 모델이 아닙니다.')
+
     try:
         issue_history = IssueHistory.objects.get(
             content_type=content_type,
-            object_id=instance.id
+            history_id=instance.history_id,
+            issue_id=issue_id
         )
     except IssueHistory.DoesNotExist:
         issue_history = IssueHistory(
             content_type=content_type,
-            object_id=instance.id
+            history_id=instance.history_id,
+            issue_id=issue_id
         )
-
 
     issue_history.history_date = instance.history_date
     issue_history.save()
