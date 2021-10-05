@@ -163,6 +163,9 @@ class ProjectIssueViewSet(ModelViewSet):
                 if h.prev_record:
                     delta = h.diff_against(h.prev_record, excluded_fields=['order', 'project', ])
                     for change in delta.changes:
+                        if change.field == 'key':
+                            continue
+
                         data = {
                             'field': change.field,
                             'user': {'id': h.history_user.id, 'username': h.history_user.username},
@@ -203,7 +206,7 @@ class ProjectIssueViewSet(ModelViewSet):
             else:
                 raise TypeError('이슈와 이슈태깅 히스토리컬 모델이 아닙니다.')
 
-        return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE,
+        return Response(data={'list': result, 'count': len(result), 'page_size': self.HISTORY_PAGINATION_SIZE,
                               'current_page': page_obj.number}, status=200)
 
 
