@@ -27,9 +27,10 @@ class Issue(BaseModel):
     key = models.CharField(max_length=20, null=True)
     title = models.CharField(max_length=128)
     body = models.TextField(null=True, blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='assigned_issues',
                                  null=True)
-    # subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='subscribed_issues')
+    subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='subscribed_issues', blank=True)
     status = models.SmallIntegerField(choices=STATUS.choices, default=STATUS.TODO)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
     order = models.PositiveSmallIntegerField(null=True)
@@ -43,11 +44,17 @@ class Issue(BaseModel):
 
 def generate_key(sender, instance, created, **kwargs):
     if created:
-        new_count = Issue.objects.filter(project=instance.project).count() + 1
-        instance.key = instance.project.key + '-' + str(new_count)
+        instance.key = instance.project.key + '-' + str(instance.id)
         instance.save()
 
+
+def subscribe_author_when_created(sender, instance: Issue, created, **kwargs):
+    if created:
+        instance.subscribers.add(instance.author)
+
+
 post_save.connect(generate_key, sender=Issue)
+post_save.connect(subscribe_author_when_created, sender=Issue)
 
 
 
