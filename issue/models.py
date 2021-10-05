@@ -67,10 +67,10 @@ class IssueHistory(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    created_at = models.DateTimeField(null=True)
+    history_date = models.DateTimeField(null=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-history_date']
 
 
 def create_issue_history(sender, instance, created, **kwargs):
@@ -87,7 +87,7 @@ def create_issue_history(sender, instance, created, **kwargs):
         )
 
 
-    issue_history.created_at = instance.history_date
+    issue_history.history_date = instance.history_date
     issue_history.save()
 
 
