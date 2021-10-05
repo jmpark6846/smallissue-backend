@@ -82,41 +82,6 @@ def get_or_none_if_pk_is_none(model: Model, pk):
     return model.objects.get(pk=pk)
 
 
-def get_fields_from_model(model):
-    model_field_names = list(set(chain.from_iterable(
-        (field.name, field.attname) if hasattr(field, 'attname') else (field.name,)
-        for field in model._meta.get_fields()
-        # For complete backwards compatibility, you may want to exclude
-        # GenericForeignKey from the results.
-        if not (field.many_to_one and field.related_model is None)
-    )))
-    return model_field_names
-
-#
-# def create_historical_record_manually(instance, history_dict):
-#     model = type(instance)
-#     model_field_names = get_fields_from_model(model)
-#     history_model = model.history.model
-#
-#     model_attr_dict = {
-#
-#     }
-#
-#     for field_name in model_field_names:
-#
-#
-#     new_historical_record = model.objects.create(
-#         **
-#     )
-#
-#     history_dict = dict(
-#         history_user = self.request.user,
-#         history_date = timezone.now(),
-#         history_change_reason = '',
-#         history_type = '~',
-#
-#     )
-
 class ProjectIssueViewSet(ModelViewSet):
     permission_classes = [ProjectTeammateOnly, IsAuthenticated]
     HISTORY_PAGINATION_SIZE = 10
@@ -186,7 +151,7 @@ class ProjectIssueViewSet(ModelViewSet):
         User = get_user_model()
         issue = self.get_object()
         result = []
-        histories = IssueHistory.objects.filter(issue=issue)
+        histories = IssueHistory.objects.filter(issue_id=issue.id)
         paginator = Paginator(histories, self.HISTORY_PAGINATION_SIZE)
         history_page_num = request.GET.get('history_page')
         page_obj = paginator.get_page(history_page_num)
@@ -237,8 +202,6 @@ class ProjectIssueViewSet(ModelViewSet):
                 })
             else:
                 raise TypeError('이슈와 이슈태깅 히스토리컬 모델이 아닙니다.')
-
-
 
         return Response(data={'list': result, 'count': histories.count(), 'page_size': self.HISTORY_PAGINATION_SIZE,
                               'current_page': page_obj.number}, status=200)

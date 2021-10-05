@@ -16,6 +16,7 @@ django-cors-headers = "*"
 pendulum = "*"
 drf-nested-routers = "*"
 django-simple-history = "*"
+django-notifications-hq = "*"
 
 [dev-packages]
 

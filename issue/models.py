@@ -29,6 +29,7 @@ class Issue(BaseModel):
     body = models.TextField(null=True, blank=True)
     assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='assigned_issues',
                                  null=True)
+    # subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='subscribed_issues')
     status = models.SmallIntegerField(choices=STATUS.choices, default=STATUS.TODO)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
     order = models.PositiveSmallIntegerField(null=True)
@@ -36,15 +37,18 @@ class Issue(BaseModel):
                                   through_fields=('issue', 'tag'))
     history = HistoricalRecords()
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if not self.key:
-            new_count = Issue.objects.filter(project=self.project).count() + 1
-            self.key = self.project.key + '-' + str(new_count)
-
-        super().save(force_insert, force_update, using, update_fields)
-
     def __str__(self):
         return '#{}: {}'.format(self.id, self.title)
+
+
+def generate_key(sender, instance, created, **kwargs):
+    if created:
+        new_count = Issue.objects.filter(project=instance.project).count() + 1
+        instance.key = instance.project.key + '-' + str(new_count)
+        instance.save()
+
+post_save.connect(generate_key, sender=Issue)
+
 
 
 class Comment(BaseModel):
@@ -66,7 +70,7 @@ class IssueTagging(models.Model):
 class IssueHistory(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     history_id = models.PositiveIntegerField()
-    issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
+    issue_id = models.PositiveIntegerField(blank=True, null=True)
     history = GenericForeignKey('content_type', 'history_id')
     history_date = models.DateTimeField(null=True)
 
