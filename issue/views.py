@@ -248,16 +248,3 @@ class ProjectCommentViewSet(ModelViewSet):
         return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by(
             '-created_at')
 
-#
-#
-# @api_view(['GET'])
-# def get_or_create_tags(request):
-#     if request.method == 'GET':
-#         tag_name = request.GET.get('tag')
-#
-#         tag = Tag.objects.get_or_create(
-#             tag_name = tag_name,
-#             issue=
-#         )
-#     else:
-#         return Response(status=405)

@@ -1,5 +1,8 @@
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models.signals import post_save
 from simple_history.models import HistoricalRecords
 from smallissue.models import BaseModel
 
@@ -44,7 +47,6 @@ class Issue(BaseModel):
         return '#{}: {}'.format(self.id, self.title)
 
 
-
 class Comment(BaseModel):
     content = models.TextField()
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
@@ -59,3 +61,35 @@ class IssueTagging(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
     history = HistoricalRecords()
+
+
+class IssueHistory(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    created_at = models.DateTimeField(null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+def create_issue_history(sender, instance, created, **kwargs):
+    content_type = ContentType.objects.get_for_model(instance)
+    try:
+        issue_history = IssueHistory.objects.get(
+            content_type=content_type,
+            object_id=instance.id
+        )
+    except IssueHistory.DoesNotExist:
+        issue_history = IssueHistory(
+            content_type=content_type,
+            object_id=instance.id
+        )
+
+
+    issue_history.created_at = instance.history_date
+    issue_history.save()
+
+
+post_save.connect(create_issue_history, sender=Issue.history.model)
+post_save.connect(create_issue_history, sender=IssueTagging.history.model)
