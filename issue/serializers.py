@@ -1,14 +1,32 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.serializers import UserDetailSerializer
-from issue.models import Project, Issue, Comment, Tag
+from issue.models import Project, Issue, Comment, Tag, UserRole
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    key = serializers.CharField(read_only=True)
+
     class Meta:
         model = Project
         fields = '__all__'
+
+    def to_internal_value(self, data):
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=data['leader']['id'])
+        except User.DoesNotExist:
+            raise ValueError('user does not exist')
+
+        data['leader'] = user
+        return data
+
+    def to_representation(self, instance: Project):
+        result = super(ProjectSerializer, self).to_representation(instance)
+        result['leader'] = { 'id': instance.leader.id, 'username': instance.leader.username }
+        return result
 
     def create(self, validated_data):
         validated_data['order'] = Project.objects.count()
@@ -43,9 +61,21 @@ class IssueSerializer(serializers.ModelSerializer):
         return result
 
 
-class ProjectAssigneeListSerializer(serializers.Serializer):
+class ProjectUsersSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     username = serializers.CharField()
+    email = serializers.CharField()
+    role = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        user_role = obj.project_roles.filter(project=self.context.get('project')).last()
+        return {'id': user_role.id, 'name': user_role.name}
+
+
+class UserRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRole
+        fields = '__all__'
 
 
 class IssueDetailSerializer(serializers.ModelSerializer):

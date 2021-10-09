@@ -1,4 +1,6 @@
 import os
+
+import notifications.views
 from django.utils.translation import gettext_lazy as _
 
 import requests
@@ -13,6 +15,7 @@ from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.kakao.provider import KakaoProvider
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from notifications.models import Notification
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -91,19 +94,6 @@ def kakao_login(request):
     return JsonResponse(res_data)
 
 
-@api_view(['GET'])
-def get_unread_notifications(request: Request):
-    if not request.user:
-        return Response(status=401)
-
-    unread_list = request.user.notifications.unread()
-
-    return Response({
-        "unread_count": len(unread_list),
-        "unread_list": NotificationSerializer(unread_list, many=True).data
-    }, status=200)
-
-
 class LogoutView(dj_rest_auth_LogoutView):
     def logout(self, request: Request):
         try:
@@ -141,4 +131,45 @@ class LogoutView(dj_rest_auth_LogoutView):
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
         return response
+
+
+NOTIFICATION_MAX = 10
+
+
+@api_view(['GET'])
+def get_unread_notifications(request: Request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+
+    unread_list = request.user.notifications.unread()[0:NOTIFICATION_MAX]
+
+    return Response({
+        "unread_count": len(unread_list),
+        "unread_list": NotificationSerializer(unread_list, many=True).data
+    }, status=200)
+
+
+@api_view(['PATCH'])
+def mark_as_read(request, pk=None):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+
+    try:
+        notification = Notification.objects.get(
+            id=pk,
+            recipient=request.user,
+        )
+        notification.mark_as_read()
+        return Response(status=200)
+    except Notification.DoesNotExist:
+        return Response({'error': '알람이 존재하지 않습니다'}, status=404)
+
+
+@api_view(['PATCH'])
+def mark_all_as_read(request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+
+    request.user.notifications.mark_all_as_read()
+    return Response(status=200)
 

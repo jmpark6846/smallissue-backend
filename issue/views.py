@@ -19,15 +19,15 @@ from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory
 from issue.pagination import CommentPagination
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    ProjectAssigneeListSerializer, CommentSerializer, TagSerializer
+    ProjectUsersSerializer, CommentSerializer, TagSerializer, UserRoleSerializer
+from smallissue.utils import get_or_none_if_pk_is_none
 
 
 class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectSerializer
 
     def get_permissions(self):
-        print(self.action)
-        if self.action in ['list', 'retrieve', 'users']:
+        if self.action in ['list', 'retrieve', 'users', 'roles']:
             permission_classes = [ProjectTeammateOnly, IsAuthenticated]
         elif self.action == 'create':
             permission_classes = [IsAuthenticated]
@@ -40,10 +40,24 @@ class ProjectViewSet(ModelViewSet):
     def get_queryset(self):
         return self.request.user.projects.order_by('order')
 
+    @action(detail=True, methods=['post'])
+    def participate(self, request, pk=None):
+        project = self.get_object()
+        project.users.add(request.user)
+        # 역할 추가
+
+        return Response(ProjectUsersSerializer(request.user).data, status=200)
+
+    @action(detail=True, methods=['GET'])
+    def roles(self, request, pk=None):
+        project = self.get_object()
+
+        return Response(UserRoleSerializer(project.roles, many=True).data, status=200 )
+
     @action(detail=True, methods=['get'])
     def users(self, request, pk=None):
         project = self.get_object()
-        users = ProjectAssigneeListSerializer(project.users, many=True).data
+        users = ProjectUsersSerializer(project.users, many=True, context={'project': project}).data
         return Response({'users': users})
 
     @action(detail=False, methods=['patch'])
@@ -91,6 +105,17 @@ class ProjectIssueViewSet(ModelViewSet):
         if self.action in ['retrieve', 'update']:
             return IssueDetailSerializer
         return IssueSerializer
+
+    @action(detail=True, methods=['patch'])
+    def toggle_subscription(self, request, **kwargs):
+        issue = self.get_object()
+        if request.user in issue.subscribers.all():
+            issue.subscribers.remove(request.user)
+        else:
+            issue.subscribers.add(request.user)
+
+        subs = list(map(lambda x: x.pk, issue.subscribers.all()))
+        return Response(data={'subscribers':subs}, status=200)
 
     @action(detail=False, methods=['patch'])
     def set_orders(self, request, **kwargs):

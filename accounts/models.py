@@ -52,7 +52,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User,
                                 on_delete=models.CASCADE,
                                 related_name='profile', )
-    field = models.CharField(max_length=140, null=True, blank=True)
+    job = models.CharField(max_length=140, null=True, blank=True)
 
 
 def save_profile(sender, instance, created, **kwargs):

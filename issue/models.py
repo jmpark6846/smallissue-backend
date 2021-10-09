@@ -16,11 +16,26 @@ class Project(BaseModel):
     key = models.CharField(max_length=5)
     name = models.CharField(max_length=128)
     leader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='projects_leading')
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects', through='Participation')
     order = models.PositiveSmallIntegerField(null=True)
 
     def __str__(self):
-        return self.name
+        return '{}#{}'.format(self.name, self.id)
+
+
+class Participation(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+
+class UserRole(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, related_name='roles')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='project_roles')
+    name = models.CharField(max_length=128)
+
+    def __str__(self):
+        return '{} {}'.format(self.project, self.name)
 
 
 class Issue(BaseModel):
@@ -148,7 +163,6 @@ def get_change_from_histories(histories):
 
     return result
 
-from dj_rest_auth.views import LogoutView
 
 def notify_issue_changes(sender, instance, created, **kwargs):
     issue = Issue.objects.get(id=instance.issue_id)
@@ -158,7 +172,7 @@ def notify_issue_changes(sender, instance, created, **kwargs):
     if not issue_subscribers.exists():
         return
 
-    change = get_change_from_histories([instance])[0]
+    # change = get_change_from_histories([instance])[0]
 
     h = instance.history
     if h.__class__ == Issue.history.model:  # HistoricalIssue
@@ -175,10 +189,10 @@ def notify_issue_changes(sender, instance, created, **kwargs):
         description = "이슈를 업데이트했습니다."
         verb = "업데이트"
 
-    issue_data = {'id': issue.id, 'title': issue.title, 'project_id': issue.project.id, 'change': change}
+    # issue_data = {'id': issue.id, 'key': issue.key, 'title': issue.title, 'project_id': issue.project.id, 'change': change}
 
     notify.send(actor, recipient=issue_subscribers, verb=verb, target=instance,
-                description=description,issue=issue_data)
+                description=description)
 
 
 post_save.connect(notify_issue_changes, sender=IssueHistory)
@@ -213,3 +227,4 @@ def create_issue_history(sender, instance, created, **kwargs):
 
 post_save.connect(create_issue_history, sender=Issue.history.model)
 post_save.connect(create_issue_history, sender=IssueTagging.history.model)
+
