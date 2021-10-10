@@ -73,13 +73,13 @@ class ProjectUsersSerializer(serializers.Serializer):
         if team:
             return {'id': team.id, 'name': team.name}
         else:
-            return {'id': None, 'name':None}
+            return {'id': None, 'name': None}
 
     def get_participation(self, obj):
         project = self.context.get('project')
         p = obj.participation_set.filter(project=project).last()
-        return {'id': p.id, 'project': {'id': project.id, 'name': project.name}, 'date_joined': p.date_joined,
-                'job_title': p.job_title}
+        print(project, p)
+        return {'date_joined': p.date_joined, 'job_title': p.job_title}
 
 
 class TeamSerializer(serializers.ModelSerializer):

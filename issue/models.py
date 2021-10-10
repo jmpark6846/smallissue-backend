@@ -24,11 +24,13 @@ class Project(BaseModel):
 
 
 class Participation(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
-    job_title = models.CharField(max_length=80)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    job_title = models.CharField(max_length=80, null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return '{} - {}'.format(self.project, self.user.username)
 
 class Team(models.Model):
     project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, related_name='teams')

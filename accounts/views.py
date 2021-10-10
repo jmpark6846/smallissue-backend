@@ -24,7 +24,7 @@ from dj_rest_auth.views import LogoutView as dj_rest_auth_LogoutView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
-from accounts.serializers import NotificationSerializer
+from accounts.serializers import NotificationSerializer, UserSearchResultSerializer
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
 
@@ -172,4 +172,13 @@ def mark_all_as_read(request):
 
     request.user.notifications.mark_all_as_read()
     return Response(status=200)
+
+
+@api_view(['get'])
+def search_user_by_email(request: Request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+
+    qs = User.objects.filter(email__contains=request.query_params.get('email'))
+    return Response(UserSearchResultSerializer(qs, many=True).data, status=200)
 

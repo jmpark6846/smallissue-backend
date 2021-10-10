@@ -38,3 +38,9 @@ class NotificationSerializer(serializers.Serializer):
     timestamp = serializers.DateTimeField()
     target = NotificationIssueHistorySerializer(IssueHistory)
     description = serializers.CharField()
+
+
+class UserSearchResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id','username','email']
