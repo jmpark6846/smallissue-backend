@@ -19,7 +19,7 @@ from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory
 from issue.pagination import CommentPagination
 from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    ProjectUsersSerializer, CommentSerializer, TagSerializer, UserRoleSerializer
+    ProjectUsersSerializer, CommentSerializer, TagSerializer, TeamSerializer
 from smallissue.utils import get_or_none_if_pk_is_none
 
 
@@ -27,7 +27,7 @@ class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'users', 'roles']:
+        if self.action in ['list', 'retrieve', 'users', 'teams']:
             permission_classes = [ProjectTeammateOnly, IsAuthenticated]
         elif self.action == 'create':
             permission_classes = [IsAuthenticated]
@@ -49,10 +49,9 @@ class ProjectViewSet(ModelViewSet):
         return Response(ProjectUsersSerializer(request.user).data, status=200)
 
     @action(detail=True, methods=['GET'])
-    def roles(self, request, pk=None):
+    def teams(self, request, pk=None):
         project = self.get_object()
-
-        return Response(UserRoleSerializer(project.roles, many=True).data, status=200 )
+        return Response(TeamSerializer(project.teams, many=True).data, status=200 )
 
     @action(detail=True, methods=['get'])
     def users(self, request, pk=None):

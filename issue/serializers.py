@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.serializers import UserDetailSerializer
-from issue.models import Project, Issue, Comment, Tag, UserRole
+from issue.models import Project, Issue, Comment, Tag, Team
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Project):
         result = super(ProjectSerializer, self).to_representation(instance)
-        result['leader'] = { 'id': instance.leader.id, 'username': instance.leader.username }
+        result['leader'] = {'id': instance.leader.id, 'username': instance.leader.username}
         return result
 
     def create(self, validated_data):
@@ -45,7 +45,7 @@ class IssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = '__all__'
-        
+
     def create(self, validated_data):
         validated_data['order'] = Issue.objects.count()
         return super(IssueSerializer, self).create(validated_data)
@@ -65,16 +65,26 @@ class ProjectUsersSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     username = serializers.CharField()
     email = serializers.CharField()
-    role = serializers.SerializerMethodField()
+    team = serializers.SerializerMethodField()
+    participation = serializers.SerializerMethodField()
 
-    def get_role(self, obj):
-        user_role = obj.project_roles.filter(project=self.context.get('project')).last()
-        return {'id': user_role.id, 'name': user_role.name}
+    def get_team(self, obj):
+        team = obj.project_teams.filter(project=self.context.get('project')).last()
+        if team:
+            return {'id': team.id, 'name': team.name}
+        else:
+            return {'id': None, 'name':None}
+
+    def get_participation(self, obj):
+        project = self.context.get('project')
+        p = obj.participation_set.filter(project=project).last()
+        return {'id': p.id, 'project': {'id': project.id, 'name': project.name}, 'date_joined': p.date_joined,
+                'job_title': p.job_title}
 
 
-class UserRoleSerializer(serializers.ModelSerializer):
+class TeamSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserRole
+        model = Team
         fields = '__all__'
 
 

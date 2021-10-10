@@ -26,12 +26,13 @@ class Project(BaseModel):
 class Participation(models.Model):
     project = models.ForeignKey(Project, on_delete=models.DO_NOTHING)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
+    job_title = models.CharField(max_length=80)
     date_joined = models.DateTimeField(auto_now_add=True)
 
 
-class UserRole(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, related_name='roles')
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='project_roles')
+class Team(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, related_name='teams')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='project_teams')
     name = models.CharField(max_length=128)
 
     def __str__(self):
