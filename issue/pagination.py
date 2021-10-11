@@ -2,9 +2,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 
-class CommentPagination(PageNumberPagination):
+class DefaultPagination(PageNumberPagination):
     page_size = 10
-    page_size_query_param = 'comment_page_num'
+    page_size_query_param = 'page_num'
 
     def get_paginated_response(self, data):
         return Response({

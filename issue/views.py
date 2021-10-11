@@ -15,11 +15,11 @@ from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
-from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory, Participation
-from issue.pagination import CommentPagination
-from issue.permissions import ProjectTeammateOnly, ProjectLeaderOnly, IsAuthorOnly
+from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory, Participation, Team
+from issue.pagination import DefaultPagination
+from issue.permissions import ProjectUsersOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    ProjectUsersSerializer, CommentSerializer, TagSerializer, TeamSerializer
+    CommentSerializer, TagSerializer, TeamSerializer, ProjectParticipationSerializer, TeamUserSerializer
 from smallissue.utils import get_or_none_if_pk_is_none
 
 User = get_user_model()
@@ -30,7 +30,7 @@ class ProjectViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'users', 'teams']:
-            permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly, IsAuthenticated]
         elif self.action == 'create':
             permission_classes = [IsAuthenticated]
         elif self.action in ['destroy', 'update', 'set_orders']:
@@ -42,16 +42,12 @@ class ProjectViewSet(ModelViewSet):
     def get_queryset(self):
         return self.request.user.projects.order_by('order')
 
-    @action(detail=True, methods=['GET'])
-    def teams(self, request, pk=None):
-        project = self.get_object()
-        return Response(TeamSerializer(project.teams, many=True).data, status=200)
-
-    @action(detail=True, methods=['get'])
-    def users(self, request, pk=None):
-        project = self.get_object()
-        users = ProjectUsersSerializer(project.users, many=True, context={'project': project}).data
-        return Response({'users': users})
+    #
+    # @action(detail=True, methods=['get'])
+    # def users(self, request, pk=None):
+    #     project = self.get_object()
+    #     users = ProjectUsersSerializer(project.users, many=True, context={'project': project}).data
+    #     return Response({'users': users})
 
     @action(detail=False, methods=['patch'])
     def set_orders(self, request, **kwargs):
@@ -65,36 +61,6 @@ class ProjectViewSet(ModelViewSet):
             project.save()
 
         return Response(status=200)
-
-
-class ProjectParticipationViewSet(ModelViewSet):
-    serializer_class = ProjectUsersSerializer
-
-    def get_queryset(self):
-        return Participation.objects.filter(project=self.kwargs['project_pk']).order_by('-date_joined')
-
-    def create(self, request, *args, **kwargs):
-        try:
-            project = Project.objects.get(id=self.kwargs['project_pk'])
-        except Project.DoesNotExist:
-            return Response('프로젝트가 존재하지 않습니다.', status=404)
-
-        user_id = request.data['user']
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response('추가하려는 사용자가 존재하지 않습니다.', status=404)
-
-        already_exists = Participation.objects.filter(project=project, user=user).exists()
-
-        if already_exists:
-            return Response(ProjectUsersSerializer(user, context={'project': project}).data, status.HTTP_302_FOUND)
-
-        Participation.objects.create(
-            project=project,
-            user=user
-        )
-        return Response(ProjectUsersSerializer(user, context={'project': project}).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -115,8 +81,87 @@ def check_project_key_available(request: Request):
     return Response(data={'available': True})
 
 
+class ProjectParticipationViewSet(ModelViewSet):
+    serializer_class = ProjectParticipationSerializer
+    pagination_class = DefaultPagination
+
+    def get_permissions(self):
+        if self.action in ['destroy']:
+            permission_classes = [ProjectLeaderOnly, IsAuthenticated]
+        else:
+            permission_classes = [ProjectUsersOnly, IsAuthenticated]
+
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        return Participation.objects.filter(project=self.kwargs['project_pk']).order_by('-date_joined')
+
+    def create(self, request, *args, **kwargs):
+        try:
+            project = Project.objects.get(id=self.kwargs['project_pk'])
+        except Project.DoesNotExist:
+            return Response('프로젝트가 존재하지 않습니다.', status=404)
+
+        user_id = request.data['user']
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response('추가하려는 사용자가 존재하지 않습니다.', status=404)
+
+        p = Participation.objects.filter(project=project, user=user).last()
+
+        if p:
+            return Response(ProjectParticipationSerializer(p).data, status.HTTP_302_FOUND)
+
+        p = Participation.objects.create(
+            project=project,
+            user=user
+        )
+        return Response(ProjectParticipationSerializer(p).data, status=status.HTTP_201_CREATED)
+
+
+class ProjectTeamViewSet(ModelViewSet):
+    serializer_class = TeamSerializer
+    permission_classes = [ProjectUsersOnly, IsAuthenticated]
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        return Team.objects.filter(project=self.kwargs['project_pk']).order_by('name')
+
+
+class ProjectTeamUsersViewSet(ModelViewSet):
+    serializer_class = TeamUserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(project_teams__id=self.kwargs['team_pk'])
+
+    def create(self, request, *args, **kwargs):
+        user_id = self.request.data.get('user')
+        try:
+            user = User.objects.get(id=user_id)
+            team = Team.objects.get(id=self.kwargs['team_pk'])
+        except User.DoesNotExist:
+            return Response('추가하려는 사용자가 존재하지 않습니다.', status=404)
+        except Team.DoesNotExist:
+            return Response('추가하려는 팀이 존재하지 않습니다.', status=404)
+
+        team.users.add(user)
+        return Response(TeamUserSerializer(team.users, many=True).data)
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        try:
+            team = Team.objects.get(id=self.kwargs['team_pk'])
+        except Team.DoesNotExist:
+            return Response('추가하려는 팀이 존재하지 않습니다.', status=404)
+
+        team.users.remove(user)
+        return Response(TeamUserSerializer(team.users, many=True).data)
+
+
 class ProjectIssueViewSet(ModelViewSet):
-    permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+    permission_classes = [ProjectUsersOnly, IsAuthenticated]
     HISTORY_PAGINATION_SIZE = 10
 
     def get_queryset(self):
@@ -256,13 +301,13 @@ class ProjectIssueViewSet(ModelViewSet):
 
 class ProjectCommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
-    pagination_class = CommentPagination
+    pagination_class = DefaultPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly, IsAuthenticated]
         elif self.action == 'create':
-            permission_classes = [ProjectTeammateOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly, IsAuthenticated]
         elif self.action in ['destroy', 'update', 'partial_update']:
             permission_classes = [IsAuthorOnly, IsAuthenticated]
         return [permission() for permission in permission_classes]

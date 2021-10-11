@@ -1,9 +1,10 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from issue.models import Project, Issue, Comment, Tag, Team, Participation
 
-from accounts.serializers import UserDetailSerializer
-from issue.models import Project, Issue, Comment, Tag, Team
+User = get_user_model()
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -14,7 +15,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def to_internal_value(self, data):
-        User = get_user_model()
         try:
             user = User.objects.get(pk=data['leader']['id'])
         except User.DoesNotExist:
@@ -36,7 +36,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 class ProjectUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ['id', 'username']
+        fields = ['id', 'username', 'email']
 
 
 class IssueSerializer(serializers.ModelSerializer):
@@ -61,31 +61,42 @@ class IssueSerializer(serializers.ModelSerializer):
         return result
 
 
-class ProjectUsersSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    username = serializers.CharField()
-    email = serializers.CharField()
+class ProjectParticipationSerializer(serializers.ModelSerializer):
+    user = ProjectUserSerializer()
     team = serializers.SerializerMethodField()
-    participation = serializers.SerializerMethodField()
 
-    def get_team(self, obj):
-        team = obj.project_teams.filter(project=self.context.get('project')).last()
+    class Meta:
+        model = Participation
+        fields = '__all__'
+
+    def get_team(self, obj: Participation):
+        team = obj.user.project_teams.filter(project=obj.project).last()
+
         if team:
             return {'id': team.id, 'name': team.name}
         else:
             return {'id': None, 'name': None}
 
-    def get_participation(self, obj):
-        project = self.context.get('project')
-        p = obj.participation_set.filter(project=project).last()
-        print(project, p)
-        return {'date_joined': p.date_joined, 'job_title': p.job_title}
-
 
 class TeamSerializer(serializers.ModelSerializer):
+    users = ProjectUserSerializer(many=True)
+
     class Meta:
         model = Team
         fields = '__all__'
+
+    def validate(self, attrs):
+        qs = Team.objects.filter(project=attrs['project'])
+        for project in qs:
+            if project.name == attrs['name']:
+                raise ValidationError('이미 존재하는 팀명입니다.')
+        return super(TeamSerializer, self).validate(attrs)
+
+
+class TeamUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
 
 
 class IssueDetailSerializer(serializers.ModelSerializer):

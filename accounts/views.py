@@ -25,6 +25,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
 from accounts.serializers import NotificationSerializer, UserSearchResultSerializer
+from issue.models import Team, Project, Participation
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
 
@@ -179,6 +180,24 @@ def search_user_by_email(request: Request):
     if not request.user.is_authenticated:
         return Response(status=401)
 
-    qs = User.objects.filter(email__contains=request.query_params.get('email'))
+    email = request.query_params.get('email')
+    project_id = request.query_params.get('project')
+    filter = request.query_params.get('filter')
+    team = request.query_params.get('team')
+
+    if filter == 'include':
+        qs = User.objects.filter(email__contains=email, projects__id=project_id)
+    elif filter == 'exclude':
+        qs = User.objects.filter(email__contains=email).exclude(projects__id=project_id)
+    else:
+        return Response({'error': 'filter는 include, exclude 둘 중 하나여야 합니다.'}, status=400)
+
+    if team:
+        team_filter = team[0]
+        if team_filter == '+':
+            qs = qs.filter(project_teams__id=int(team[1:]))
+        elif team_filter == '-':
+            qs = qs.exclude(project_teams__id=int(team[1:]))
+
     return Response(UserSearchResultSerializer(qs, many=True).data, status=200)
 
