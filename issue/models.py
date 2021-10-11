@@ -47,6 +47,7 @@ class Issue(BaseModel):
         TODO = 0
         DOING = 1
         DONE = 2
+        HOLD = 3
 
     key = models.CharField(max_length=20, null=True)
     title = models.CharField(max_length=128)

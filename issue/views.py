@@ -1,15 +1,9 @@
-from itertools import chain
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Model
-from django.forms.models import model_to_dict
-from django.shortcuts import render
 from django.core.paginator import Paginator
 
 from rest_framework import status
 from rest_framework.decorators import api_view, action
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
