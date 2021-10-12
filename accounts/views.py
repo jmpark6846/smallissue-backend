@@ -1,6 +1,7 @@
 import os
 
 import notifications.views
+from PIL import Image
 from django.utils.translation import gettext_lazy as _
 
 import requests
@@ -16,15 +17,19 @@ from allauth.socialaccount.providers.kakao.provider import KakaoProvider
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from notifications.models import Notification
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.decorators import api_view
+from rest_framework.parsers import FileUploadParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from dj_rest_auth.views import LogoutView as dj_rest_auth_LogoutView
+from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
-from accounts.serializers import NotificationSerializer, UserSearchResultSerializer
+from accounts.permissions import IsOwnerOnly
+from accounts.serializers import NotificationSerializer, UserSearchResultSerializer, ProfileSerializer
 from issue.models import Team, Project, Participation
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
@@ -201,3 +206,22 @@ def search_user_by_email(request: Request):
 
     return Response(UserSearchResultSerializer(qs, many=True).data, status=200)
 
+
+class ProfileView(APIView):
+    permission_classes = [IsOwnerOnly, IsAuthenticated]
+    parser_classes = [FileUploadParser]
+
+    def get(self, request, *args, **kwargs):
+
+        data = ProfileSerializer(request.user.profile).data
+        print(request.user.profile.file)
+        return Response(data, status=200)
+
+    def post(self, request, *args, **kwargs):
+        serializer = ProfileSerializer(request.user.profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

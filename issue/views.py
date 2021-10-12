@@ -36,12 +36,11 @@ class ProjectViewSet(ModelViewSet):
     def get_queryset(self):
         return self.request.user.projects.order_by('order')
 
-    #
-    # @action(detail=True, methods=['get'])
-    # def users(self, request, pk=None):
-    #     project = self.get_object()
-    #     users = ProjectUsersSerializer(project.users, many=True, context={'project': project}).data
-    #     return Response({'users': users})
+    @action(detail=True, methods=['get'])
+    def users(self, request, pk=None):
+        project = self.get_object()
+        users = ProjectUserSerializer(project.users, many=True).data
+        return Response({'users': users})
 
     @action(detail=False, methods=['patch'])
     def set_orders(self, request, **kwargs):

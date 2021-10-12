@@ -48,11 +48,15 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username']
 
 
+def user_directory_path(instance, filename):
+    return 'profile/user_{0}/{1}'.format(instance.user.id, filename)
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User,
                                 on_delete=models.CASCADE,
                                 related_name='profile', )
-    job = models.CharField(max_length=140, null=True, blank=True)
+    file = models.ImageField(upload_to=user_directory_path, blank=False, null=False)
 
 
 def save_profile(sender, instance, created, **kwargs):

@@ -1,14 +1,22 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from accounts.models import User
+from accounts.models import User, UserProfile
 from issue.models import IssueHistory, Issue
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    # profile = ProfileSerializer()
     class Meta:
         model = User
-        fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login']
+        fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login', 'profile']
+        depth = 1
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['file']
+
 
 
 class DisplayUserSerializer(serializers.Serializer):

@@ -13,12 +13,20 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
 import notifications.urls
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
 
 from accounts.views import LogoutView
 from issue.urls import urlpatterns as issue_urls
+from dotenv import find_dotenv, load_dotenv
+
+# load_dotenv(find_dotenv())
+
 
 urlpatterns = [
    path('admin/', admin.site.urls),
@@ -35,3 +43,8 @@ urlpatterns = [
    # path('accounts/google/login/', GoogleLogin.as_view(), name="google_login"),
    # path('accounts/kakao/login/', kakao_login, name='kakao_login'),
 ] + issue_urls
+
+
+env = os.getenv('env')
+if env == 'dev':
+   urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

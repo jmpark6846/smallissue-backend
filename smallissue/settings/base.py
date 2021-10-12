@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import find_dotenv, load_dotenv
+from corsheaders.defaults import default_headers
 
 load_dotenv(find_dotenv())
 
@@ -197,3 +198,14 @@ JWT_AUTH_COOKIE = 'access'
 JWT_AUTH_REFRESH_COOKIE = 'refresh'
 
 DJANGO_NOTIFICATIONS_CONFIG = {'USE_JSONFIELD': True}
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Content-Disposition'
+]
+
+CORS_EXPOSE_HEADERS = [
+    'Content-Disposition'
+]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

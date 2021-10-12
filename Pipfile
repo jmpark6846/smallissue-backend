@@ -11,12 +11,14 @@ python-dotenv = "*"
 gunicorn = "*"
 dj-rest-auth = "*"
 django-allauth = "*"
-djangorestframework-simplejwt = "*"
+djangorestframework-simplejwt = "==4.8.0"
 django-cors-headers = "*"
 pendulum = "*"
 drf-nested-routers = "*"
 django-simple-history = "*"
 django-notifications-hq = "*"
+pillow = "*"
+pyjwt = "~=2.1.0"
 
 [dev-packages]
 
