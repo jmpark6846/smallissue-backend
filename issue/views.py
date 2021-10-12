@@ -88,7 +88,12 @@ class ProjectParticipationViewSet(ModelViewSet):
 
     def get_queryset(self):
         return Participation.objects.filter(project=self.kwargs['project_pk']).order_by('-date_joined')
-
+    
+    def destroy(self, request, *args, **kwargs):
+        participation = self.get_object()
+        participation.user.issuesubscription_set.all().delete()
+        return super(ProjectParticipationViewSet, self).destroy(request, *args, **kwargs)
+        
     def create(self, request, *args, **kwargs):
         try:
             project = Project.objects.get(id=self.kwargs['project_pk'])

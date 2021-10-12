@@ -87,6 +87,8 @@ class IssueSubscription(models.Model):
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
     subscriber = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return '{} to issue#{}({})'.format(self.subscriber.username, self.issue.id, self.issue.title)
 
 class Comment(BaseModel):
     content = models.TextField()
