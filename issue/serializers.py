@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from issue.models import Project, Issue, Comment, Tag, Team, Participation
+from issue.models import Project, Issue, Comment, Tag, Team, Participation, Attachment
 
 User = get_user_model()
 
@@ -139,3 +139,9 @@ class CommentSerializer(serializers.ModelSerializer):
         result = super(CommentSerializer, self).to_representation(instance)
         result['author'] = {'id': instance.author.pk, 'username': instance.author.username}
         return result
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = '__all__'

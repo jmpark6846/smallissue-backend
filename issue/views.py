@@ -4,16 +4,18 @@ from django.core.paginator import Paginator
 
 from rest_framework import status
 from rest_framework.decorators import api_view, action
+from rest_framework.parsers import FileUploadParser
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
-from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory, Participation, Team
+from issue.models import Project, Issue, Tag, IssueTagging, IssueHistory, Participation, Team, Attachment
 from issue.pagination import DefaultPagination
 from issue.permissions import ProjectUsersOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
-    CommentSerializer, TagSerializer, TeamSerializer, ProjectParticipationSerializer, TeamUserSerializer
+    CommentSerializer, TagSerializer, TeamSerializer, ProjectParticipationSerializer, TeamUserSerializer, \
+    AttachmentSerializer
 from smallissue.utils import get_or_none_if_pk_is_none
 
 User = get_user_model()
@@ -313,3 +315,15 @@ class ProjectCommentViewSet(ModelViewSet):
     def get_queryset(self):
         return Issue.objects.get(id=self.kwargs['issue_pk'], deleted_at=None).comments.filter(deleted_at=None).order_by(
             '-created_at')
+
+
+class AttachmentViewSet(ModelViewSet):
+    serializer_class = AttachmentSerializer
+    pagination_class = DefaultPagination
+    permission_classes = [ProjectUsersOnly, IsAuthenticated]
+    parser_classes = [FileUploadParser]
+
+    def get_queryset(self):
+        return Attachment.objects.filter(project_id=self.kwargs['project_pk']).order_by('-uploaded_at')
+
+

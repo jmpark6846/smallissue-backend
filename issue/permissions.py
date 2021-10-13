@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import BasePermission
 
-from issue.models import Issue, Project, Comment, Team, Participation
+from issue.models import Issue, Project, Comment, Team, Participation, Attachment
 
 User = get_user_model()
 
@@ -10,7 +10,10 @@ class ProjectUsersOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Issue) or isinstance(obj, Team):
             return obj.project.users.filter(id=request.user.id).exists()
-
+        elif isinstance(obj, Comment):
+            return obj.issue.project.users.filter(id=request.user.id).exists()
+        elif isinstance(obj, Attachment):
+                return obj.project.uesrs.filter(id=request.user.id).exists()
         elif isinstance(obj, Participation):
             return obj.project.filter(users__id=request.user.id).exists()
 

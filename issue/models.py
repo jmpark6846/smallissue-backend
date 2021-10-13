@@ -90,6 +90,7 @@ class IssueSubscription(models.Model):
     def __str__(self):
         return '{} to issue#{}({})'.format(self.subscriber.username, self.issue.id, self.issue.title)
 
+
 class Comment(BaseModel):
     content = models.TextField()
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
@@ -235,3 +236,19 @@ def create_issue_history(sender, instance, created, **kwargs):
 post_save.connect(create_issue_history, sender=Issue.history.model)
 post_save.connect(create_issue_history, sender=IssueTagging.history.model)
 
+
+def attachment_directory_path(instance, filename):
+    return 'attachment/{0}/{1}'.format(instance.project.name, filename)
+
+
+class Attachment(models.Model):
+    file = models.FileField(upload_to=attachment_directory_path, blank=True, null=True)
+    title = models.CharField(max_length=140)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='attachments')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    content_id = models.PositiveIntegerField()
+    content = GenericForeignKey('content_type', 'content_id')
+
+    def __str__(self):
+        return self.title
