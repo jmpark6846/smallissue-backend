@@ -19,6 +19,8 @@ django-simple-history = "*"
 django-notifications-hq = "*"
 pillow = "*"
 pyjwt = "~=2.1.0"
+django-storages = "*"
+boto3 = "*"
 
 [dev-packages]
 

@@ -211,10 +211,8 @@ class ProfileView(APIView):
     permission_classes = [IsOwnerOnly, IsAuthenticated]
     parser_classes = [FileUploadParser]
 
-    def get(self, request, *args, **kwargs):
-
-        data = ProfileSerializer(request.user.profile).data
-        print(request.user.profile.file)
+    def get(self, request: Request, *args, **kwargs):
+        data = ProfileSerializer(request.user.profile, context={"request": request}).data
         return Response(data, status=200)
 
     def post(self, request, *args, **kwargs):

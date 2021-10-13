@@ -12,11 +12,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login', 'profile']
         depth = 1
 
+
 class ProfileSerializer(serializers.ModelSerializer):
+    file = serializers.ImageField(use_url=True)
+
     class Meta:
         model = UserProfile
         fields = ['file']
-
 
 
 class DisplayUserSerializer(serializers.Serializer):

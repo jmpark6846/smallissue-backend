@@ -20,31 +20,25 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-
 from accounts.views import LogoutView
 from issue.urls import urlpatterns as issue_urls
-from dotenv import find_dotenv, load_dotenv
-
-# load_dotenv(find_dotenv())
-
 
 urlpatterns = [
-   path('admin/', admin.site.urls),
-   path('inbox/notifications/', include(notifications.urls, namespace='notifications')),
-   path('accounts/', include('accounts.urls')),
-   path('accounts/logout/', LogoutView.as_view(), name='logout'),
+    path('admin/', admin.site.urls),
+    path('inbox/notifications/', include(notifications.urls, namespace='notifications')),
+    path('accounts/', include('accounts.urls')),
+    path('accounts/logout/', LogoutView.as_view(), name='logout'),
 
-   # auth
-   path('allauth/', include('allauth.urls')),
-   path('accounts/', include('dj_rest_auth.urls')),
-   path('accounts/registration/', include('dj_rest_auth.registration.urls')),
+    # auth
+    path('allauth/', include('allauth.urls')),
+    path('accounts/', include('dj_rest_auth.urls')),
+    path('accounts/registration/', include('dj_rest_auth.registration.urls')),
 
-   # social login
-   # path('accounts/google/login/', GoogleLogin.as_view(), name="google_login"),
-   # path('accounts/kakao/login/', kakao_login, name='kakao_login'),
+    # social login
+    # path('accounts/google/login/', GoogleLogin.as_view(), name="google_login"),
+    # path('accounts/kakao/login/', kakao_login, name='kakao_login'),
 ] + issue_urls
 
 
-env = os.getenv('env')
-if env == 'dev':
-   urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
