@@ -244,6 +244,7 @@ def attachment_directory_path(instance, filename):
 class Attachment(models.Model):
     file = models.FileField(upload_to=attachment_directory_path, blank=True, null=True)
     title = models.CharField(max_length=140)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='attachments')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -252,3 +253,7 @@ class Attachment(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def filename(self):
+        return self.file.name.split('/')[-1:][0]

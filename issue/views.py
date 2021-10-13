@@ -1,6 +1,8 @@
 
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
+from django.contrib.contenttypes.models import ContentType
+from django.http import FileResponse
 
 from rest_framework import status
 from rest_framework.decorators import api_view, action
@@ -242,7 +244,7 @@ class ProjectIssueViewSet(ModelViewSet):
         result = []
         histories = IssueHistory.objects.filter(issue_id=issue.id)
         paginator = Paginator(histories, self.HISTORY_PAGINATION_SIZE)
-        history_page_num = request.GET.get('history_page')
+        history_page_num = request.GET.get('page_num')
         page_obj = paginator.get_page(history_page_num)
 
         for issue_history in page_obj.object_list:
@@ -324,6 +326,26 @@ class AttachmentViewSet(ModelViewSet):
     parser_classes = [FileUploadParser]
 
     def get_queryset(self):
-        return Attachment.objects.filter(project_id=self.kwargs['project_pk']).order_by('-uploaded_at')
+        qs = Attachment.objects.filter(project_id=self.kwargs['project_pk']).order_by('-uploaded_at')
+        issue_id = self.request.query_params.get('issue')
 
+        if issue_id:
+            content_type = ContentType.objects.get_for_model(Issue)
+            qs = qs.filter(
+                content_type=content_type,
+                content_id=issue_id,
+            )
 
+        return qs
+
+    @action(methods=['GET'], detail=True)
+    def download(self, request, **kwargs):
+        att = self.get_object()
+        import mimetypes
+        file_handle = att.file.open()
+
+        mimetype, _ = mimetypes.guess_type(att.file.path)
+        response = FileResponse(file_handle, content_type=mimetype)
+        response['Content-Length'] = att.file.size
+        response['Content-Disposition'] = "attachment; filename={}".format(att.filename)
+        return response

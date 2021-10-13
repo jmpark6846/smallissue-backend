@@ -13,7 +13,7 @@ class ProjectUsersOnly(BasePermission):
         elif isinstance(obj, Comment):
             return obj.issue.project.users.filter(id=request.user.id).exists()
         elif isinstance(obj, Attachment):
-                return obj.project.uesrs.filter(id=request.user.id).exists()
+                return obj.project.users.filter(id=request.user.id).exists()
         elif isinstance(obj, Participation):
             return obj.project.filter(users__id=request.user.id).exists()
 

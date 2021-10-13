@@ -142,6 +142,11 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
+    filename = serializers.SerializerMethodField()
+
     class Meta:
         model = Attachment
         fields = '__all__'
+
+    def get_filename(self, obj):
+        return obj.filename
