@@ -1,3 +1,4 @@
+import mimetypes
 
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
@@ -6,7 +7,7 @@ from django.http import FileResponse
 
 from rest_framework import status
 from rest_framework.decorators import api_view, action
-from rest_framework.parsers import FileUploadParser
+from rest_framework.parsers import FileUploadParser, MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.viewsets import ModelViewSet
@@ -92,12 +93,12 @@ class ProjectParticipationViewSet(ModelViewSet):
 
     def get_queryset(self):
         return Participation.objects.filter(project=self.kwargs['project_pk']).order_by('-date_joined')
-    
+
     def destroy(self, request, *args, **kwargs):
         participation = self.get_object()
         participation.user.issuesubscription_set.all().delete()
         return super(ProjectParticipationViewSet, self).destroy(request, *args, **kwargs)
-        
+
     def create(self, request, *args, **kwargs):
         try:
             project = Project.objects.get(id=self.kwargs['project_pk'])
@@ -323,7 +324,7 @@ class AttachmentViewSet(ModelViewSet):
     serializer_class = AttachmentSerializer
     pagination_class = DefaultPagination
     permission_classes = [ProjectUsersOnly, IsAuthenticated]
-    parser_classes = [FileUploadParser]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
         qs = Attachment.objects.filter(project_id=self.kwargs['project_pk']).order_by('-uploaded_at')
@@ -338,10 +339,26 @@ class AttachmentViewSet(ModelViewSet):
 
         return qs
 
+    def create(self, request, *args, **kwargs):
+        request_data = request.data
+        if request_data['content_type_string'] == 'issue':
+            content_type = ContentType.objects.get_for_model(Issue)
+            content = Issue.objects.get(id=request_data['content_id'])
+            request_data['content_type'] = content_type.id
+            request_data['content'] = content
+
+        serializer = AttachmentSerializer(data=request_data)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @action(methods=['GET'], detail=True)
     def download(self, request, **kwargs):
         att = self.get_object()
-        import mimetypes
         file_handle = att.file.open()
 
         mimetype, _ = mimetypes.guess_type(att.file.path)

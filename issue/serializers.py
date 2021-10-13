@@ -150,3 +150,13 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     def get_filename(self, obj):
         return obj.filename
+
+    def to_representation(self, instance):
+        result = super(AttachmentSerializer, self).to_representation(instance)
+        try:
+            author = User.objects.get(id=result['author'])
+        except User.DoesNotExist:
+            raise ValidationError('파일의 게시자가 존재하지 않습니다.')
+
+        result['author'] = ProjectUserSerializer(author).data
+        return result
