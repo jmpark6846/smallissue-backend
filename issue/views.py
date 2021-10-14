@@ -366,3 +366,4 @@ class AttachmentViewSet(ModelViewSet):
         response['Content-Length'] = att.file.size
         response['Content-Disposition'] = "attachment; filename={}".format(att.filename)
         return response
+

@@ -149,6 +149,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'https://smallissue-frontend-jmpark6846.vercel.app',
     'https://smallissue-frontend.vercel.app',
+    'https://smallissue.s3.amazonaws.com',
     'https://smallissue.app',
 ]
 CORS_ALLOW_CREDENTIALS = True
