@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from rest_framework.permissions import BasePermission
 
 from issue.models import Issue, Project, Comment, Team, Participation, Attachment
@@ -34,3 +35,4 @@ class ProjectLeaderOnly(BasePermission):
 class IsAuthorOnly(BasePermission):
     def has_object_permission(self, request, view, obj: Comment):
         return obj.author == request.user
+

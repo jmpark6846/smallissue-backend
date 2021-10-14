@@ -22,12 +22,21 @@ class GroupSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
-    groups = GroupSerializer(many=True, read_only=True)
+    groups = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login', 'profile', 'groups']
-        # depth = 1
+
+    def get_groups(self, obj):
+        result = None
+
+        for group in obj.groups.all():
+            if group.name == 'read_only':
+                result = [{'name': group.name}]
+                break
+
+        return result
 
 
 class DisplayUserSerializer(serializers.Serializer):

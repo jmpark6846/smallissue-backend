@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from notifications.signals import notify
 
 from django.conf import settings
@@ -21,6 +22,15 @@ class Project(BaseModel):
 
     def __str__(self):
         return '{}#{}'.format(self.name, self.id)
+
+
+def add_project_leader_to_leader_group(sender, instance: Project, created, **kwargs):
+    if created:
+        group = Group.objects.get(name='project_leader')
+        instance.leader.groups.add(group)
+
+
+post_save.connect(add_project_leader_to_leader_group, sender=Project)
 
 
 class Participation(models.Model):

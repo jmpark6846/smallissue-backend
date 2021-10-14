@@ -45,6 +45,15 @@ class ProjectViewSet(ModelViewSet):
     def get_queryset(self):
         return self.request.user.projects.order_by('order')
 
+    # def destroy(self, request, *args, **kwargs):
+    #     if request.user.has_perm('issue.can_only_delete_own'):
+    #         project = self.get_object()
+    #         project.delete()
+    #     else:
+    #         return Response(status=status.HTTP_403_FORBIDDEN)
+    #
+    #     return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=['get'])
     def users(self, request, pk=None):
         project = self.get_object()
@@ -63,6 +72,7 @@ class ProjectViewSet(ModelViewSet):
             project.save()
 
         return Response(status=200)
+
 
 
 class CheckProjectKeyAvailableAPIView(DjangoGroupCompatibleAPIView):
