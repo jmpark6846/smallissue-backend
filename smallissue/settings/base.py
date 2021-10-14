@@ -14,6 +14,9 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import find_dotenv, load_dotenv
 from corsheaders.defaults import default_headers
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
+
+from smallissue.utils import get_classes_from_string
 
 load_dotenv(find_dotenv())
 
@@ -167,12 +170,16 @@ AUTH_USER_MODEL = 'accounts.User'
 SITE_ID = 2
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
-        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.IsAuthenticated',
+        "rest_framework.permissions.DjangoModelPermissions",
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
     ),
 }
+
+DEFAULT_PERMISSION_CLASSES = get_classes_from_string(REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'])
+
 REST_USE_JWT = True
 
 # django-allauth

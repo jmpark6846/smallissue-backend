@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models.signals import post_save
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser, BaseUserManager, Group
 
 
 class UserManager(BaseUserManager):
@@ -59,10 +59,13 @@ class UserProfile(models.Model):
     file = models.ImageField(upload_to=user_directory_path, blank=False, null=False)
 
 
-def save_profile(sender, instance, created, **kwargs):
+def add_profile_and_group(sender, instance, created, **kwargs):
     if created:
         profile = UserProfile(user=instance)
         profile.save()
 
+        group = Group.objects.get(name='project_user')
+        instance.groups.add(group)
 
-post_save.connect(save_profile, sender=User)
+
+post_save.connect(add_profile_and_group, sender=User)

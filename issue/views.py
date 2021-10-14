@@ -19,7 +19,9 @@ from issue.permissions import ProjectUsersOnly, ProjectLeaderOnly, IsAuthorOnly
 from issue.serializers import ProjectSerializer, IssueSerializer, ProjectUserSerializer, IssueDetailSerializer, \
     CommentSerializer, TagSerializer, TeamSerializer, ProjectParticipationSerializer, TeamUserSerializer, \
     AttachmentSerializer
+from smallissue.settings.base import DEFAULT_PERMISSION_CLASSES
 from smallissue.utils import get_or_none_if_pk_is_none
+from smallissue.views import DjangoGroupCompatibleAPIView
 
 User = get_user_model()
 
@@ -29,13 +31,15 @@ class ProjectViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'users', 'teams']:
-            permission_classes = [ProjectUsersOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly,]
         elif self.action == 'create':
-            permission_classes = [IsAuthenticated]
+            permission_classes = []
         elif self.action in ['destroy', 'update', 'set_orders']:
-            permission_classes = [ProjectLeaderOnly, IsAuthenticated]
+            permission_classes = [ProjectLeaderOnly, ]
         else:
             permission_classes = [IsAdminUser]
+
+        permission_classes += DEFAULT_PERMISSION_CLASSES
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
@@ -61,6 +65,25 @@ class ProjectViewSet(ModelViewSet):
         return Response(status=200)
 
 
+class CheckProjectKeyAvailableAPIView(DjangoGroupCompatibleAPIView):
+    def get(self, request):
+        key = request.query_params.get('key')
+
+        if not isinstance(key, str):
+            return Response(data={'available': False, 'error_msg': '문자가 아닙니다.'})
+
+        import string
+        key = key.upper()
+        if not key.isascii() or not key[0] in string.ascii_uppercase:
+            return Response(data={'available': False, 'error_msg': '영문자, 숫자, 특수문자만 사용할 수 있으며 첫 문자는 영문자여야 합니다.'})
+
+        if request.user.projects.filter(key=key).exists():
+            return Response(data={'available': False, 'error_msg': '프로젝트에서 이미 사용하고 있는 키값입니다.'})
+
+        return Response(data={'available': True})
+
+
+
 @api_view(['GET'])
 def check_project_key_available(request: Request):
     key = request.query_params.get('key')
@@ -84,11 +107,7 @@ class ProjectParticipationViewSet(ModelViewSet):
     pagination_class = DefaultPagination
 
     def get_permissions(self):
-        if self.action in ['destroy']:
-            permission_classes = [ProjectLeaderOnly, IsAuthenticated]
-        else:
-            permission_classes = [ProjectUsersOnly, IsAuthenticated]
-
+        permission_classes = [ProjectUsersOnly,] + DEFAULT_PERMISSION_CLASSES
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
@@ -125,7 +144,7 @@ class ProjectParticipationViewSet(ModelViewSet):
 
 class ProjectTeamViewSet(ModelViewSet):
     serializer_class = TeamSerializer
-    permission_classes = [ProjectUsersOnly, IsAuthenticated]
+    permission_classes = [ProjectUsersOnly,]+DEFAULT_PERMISSION_CLASSES
     pagination_class = DefaultPagination
 
     def get_queryset(self):
@@ -134,7 +153,6 @@ class ProjectTeamViewSet(ModelViewSet):
 
 class ProjectTeamUsersViewSet(ModelViewSet):
     serializer_class = TeamUserSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return User.objects.filter(project_teams__id=self.kwargs['team_pk'])
@@ -164,7 +182,7 @@ class ProjectTeamUsersViewSet(ModelViewSet):
 
 
 class ProjectIssueViewSet(ModelViewSet):
-    permission_classes = [ProjectUsersOnly, IsAuthenticated]
+    permission_classes = [ProjectUsersOnly]+DEFAULT_PERMISSION_CLASSES
     HISTORY_PAGINATION_SIZE = 10
 
     def get_queryset(self):
@@ -308,11 +326,13 @@ class ProjectCommentViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            permission_classes = [ProjectUsersOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly]
         elif self.action == 'create':
-            permission_classes = [ProjectUsersOnly, IsAuthenticated]
+            permission_classes = [ProjectUsersOnly]
         elif self.action in ['destroy', 'update', 'partial_update']:
-            permission_classes = [IsAuthorOnly, IsAuthenticated]
+            permission_classes = [IsAuthorOnly]
+
+        permission_classes += DEFAULT_PERMISSION_CLASSES
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
@@ -323,7 +343,7 @@ class ProjectCommentViewSet(ModelViewSet):
 class AttachmentViewSet(ModelViewSet):
     serializer_class = AttachmentSerializer
     pagination_class = DefaultPagination
-    permission_classes = [ProjectUsersOnly, IsAuthenticated]
+    permission_classes = [ProjectUsersOnly]+DEFAULT_PERMISSION_CLASSES
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
@@ -366,4 +386,3 @@ class AttachmentViewSet(ModelViewSet):
         response['Content-Length'] = att.file.size
         response['Content-Disposition'] = "attachment; filename={}".format(att.filename)
         return response
-

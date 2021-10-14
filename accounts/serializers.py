@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from rest_framework import serializers
 
 from accounts.models import User, UserProfile
@@ -13,14 +14,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ['file']
 
 
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'
+
+
 class UserDetailSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
+    groups = GroupSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login', 'profile']
+        fields = ['pk', 'email', 'username', 'is_staff', 'is_active', 'date_joined', 'last_login', 'profile', 'groups']
         # depth = 1
-
 
 
 class DisplayUserSerializer(serializers.Serializer):
@@ -37,7 +44,7 @@ class NotificationIssueHistorySerializer(serializers.Serializer):
             issue = Issue.objects.get(id=obj.issue_id)
             # change = get_change_from_histories([obj])[0]
             return {'id': issue.id, 'key': issue.key, 'title': issue.title,
-                          'project_id': issue.project.id}  # change
+                    'project_id': issue.project.id}  # change
 
         except Issue.DoesNotExist:
             raise ValueError('알림의 이슈가 존재하지 않습니다.')
@@ -55,4 +62,4 @@ class NotificationSerializer(serializers.Serializer):
 class UserSearchResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id','username','email']
+        fields = ['id', 'username', 'email']

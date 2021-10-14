@@ -31,6 +31,9 @@ from accounts.models import User
 from accounts.permissions import IsOwnerOnly
 from accounts.serializers import NotificationSerializer, UserSearchResultSerializer, ProfileSerializer
 from issue.models import Team, Project, Participation
+from smallissue.settings.base import DEFAULT_PERMISSION_CLASSES
+
+from smallissue.views import DjangoGroupCompatibleAPIView
 
 KAKAO_API_KEY = os.getenv('KAKAO_API_KEY')
 
@@ -142,6 +145,32 @@ class LogoutView(dj_rest_auth_LogoutView):
 NOTIFICATION_MAX = 10
 
 
+class UnreadNotificiationAPIView(DjangoGroupCompatibleAPIView):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(status=401)
+
+        unread_list = request.user.notifications.unread()[0:NOTIFICATION_MAX]
+
+        return Response({
+            "unread_count": len(unread_list),
+            "unread_list": NotificationSerializer(unread_list, many=True).data
+        }, status=200)
+
+
+class MarkAsReadAPIView(DjangoGroupCompatibleAPIView):
+    def patch(self, request, pk=None):
+        try:
+            notification = Notification.objects.get(
+                id=pk,
+                recipient=request.user,
+            )
+            notification.mark_as_read()
+            return Response(status=200)
+        except Notification.DoesNotExist:
+            return Response({'error': '알람이 존재하지 않습니다'}, status=404)
+
+
 @api_view(['GET'])
 def get_unread_notifications(request: Request):
     if not request.user.is_authenticated:
@@ -171,6 +200,15 @@ def mark_as_read(request, pk=None):
         return Response({'error': '알람이 존재하지 않습니다'}, status=404)
 
 
+class MarkAllAsReadAPIView(DjangoGroupCompatibleAPIView):
+    def patch(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=401)
+
+        request.user.notifications.mark_all_as_read()
+        return Response(status=200)
+
+
 @api_view(['PATCH'])
 def mark_all_as_read(request):
     if not request.user.is_authenticated:
@@ -178,6 +216,33 @@ def mark_all_as_read(request):
 
     request.user.notifications.mark_all_as_read()
     return Response(status=200)
+
+
+class SearchUserByEmailAPIView(DjangoGroupCompatibleAPIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=401)
+
+        email = request.query_params.get('email')
+        project_id = request.query_params.get('project')
+        filter = request.query_params.get('filter')
+        team = request.query_params.get('team')
+
+        if filter == 'include':
+            qs = User.objects.filter(email__contains=email, projects__id=project_id)
+        elif filter == 'exclude':
+            qs = User.objects.filter(email__contains=email).exclude(projects__id=project_id)
+        else:
+            return Response({'error': 'filter는 include, exclude 둘 중 하나여야 합니다.'}, status=400)
+
+        if team:
+            team_filter = team[0]
+            if team_filter == '+':
+                qs = qs.filter(project_teams__id=int(team[1:]))
+            elif team_filter == '-':
+                qs = qs.exclude(project_teams__id=int(team[1:]))
+
+        return Response(UserSearchResultSerializer(qs, many=True).data, status=200)
 
 
 @api_view(['get'])
@@ -207,8 +272,8 @@ def search_user_by_email(request: Request):
     return Response(UserSearchResultSerializer(qs, many=True).data, status=200)
 
 
-class ProfileView(APIView):
-    permission_classes = [IsOwnerOnly, IsAuthenticated]
+class ProfileView(DjangoGroupCompatibleAPIView):
+    permission_classes = [IsOwnerOnly]+DEFAULT_PERMISSION_CLASSES
     parser_classes = [FileUploadParser]
 
     def get(self, request: Request, *args, **kwargs):
