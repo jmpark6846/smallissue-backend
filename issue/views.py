@@ -1,6 +1,7 @@
 import mimetypes
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.paginator import Paginator
 from django.contrib.contenttypes.models import ContentType
 from django.http import FileResponse
@@ -31,7 +32,7 @@ class ProjectViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'users', 'teams']:
-            permission_classes = [ProjectUsersOnly,]
+            permission_classes = [ProjectUsersOnly, ]
         elif self.action == 'create':
             permission_classes = []
         elif self.action in ['destroy', 'update', 'set_orders']:
@@ -40,19 +41,25 @@ class ProjectViewSet(ModelViewSet):
             permission_classes = [IsAdminUser]
 
         permission_classes += DEFAULT_PERMISSION_CLASSES
+        print(permission_classes)
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        return self.request.user.projects.order_by('order')
+        return self.request.user.projects.filter(deleted_at=None).order_by('order')
 
-    # def destroy(self, request, *args, **kwargs):
-    #     if request.user.has_perm('issue.can_only_delete_own'):
-    #         project = self.get_object()
-    #         project.delete()
-    #     else:
-    #         return Response(status=status.HTTP_403_FORBIDDEN)
-    #
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    def update(self, request, *args, **kwargs):
+        project = self.get_object()
+        serializer = ProjectSerializer(project, data=request.data)
+
+        if serializer.is_valid():
+            group = Group.objects.get(name='project_leader')
+            project.leader.groups.remove(group)
+
+            serializer.save()
+            project.leader.groups.add(group)
+            return Response(serializer.data, status=200)
+        else:
+            return Response(status=400)
 
     @action(detail=True, methods=['get'])
     def users(self, request, pk=None):
@@ -74,7 +81,6 @@ class ProjectViewSet(ModelViewSet):
         return Response(status=200)
 
 
-
 class CheckProjectKeyAvailableAPIView(DjangoGroupCompatibleAPIView):
     def get(self, request):
         key = request.query_params.get('key')
@@ -91,7 +97,6 @@ class CheckProjectKeyAvailableAPIView(DjangoGroupCompatibleAPIView):
             return Response(data={'available': False, 'error_msg': '프로젝트에서 이미 사용하고 있는 키값입니다.'})
 
         return Response(data={'available': True})
-
 
 
 @api_view(['GET'])
@@ -117,7 +122,7 @@ class ProjectParticipationViewSet(ModelViewSet):
     pagination_class = DefaultPagination
 
     def get_permissions(self):
-        permission_classes = [ProjectUsersOnly,] + DEFAULT_PERMISSION_CLASSES
+        permission_classes = [ProjectUsersOnly, ] + DEFAULT_PERMISSION_CLASSES
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
@@ -125,7 +130,13 @@ class ProjectParticipationViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         participation = self.get_object()
+        if participation.user == participation.project.leader:
+            return Response({'error': '프로젝트 리더는 탈퇴할 수 없습니다.'})
+
         participation.user.issuesubscription_set.all().delete()
+        for team in participation.user.project_teams.all():
+            team.users.remove(participation.user)
+
         return super(ProjectParticipationViewSet, self).destroy(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
@@ -154,7 +165,7 @@ class ProjectParticipationViewSet(ModelViewSet):
 
 class ProjectTeamViewSet(ModelViewSet):
     serializer_class = TeamSerializer
-    permission_classes = [ProjectUsersOnly,]+DEFAULT_PERMISSION_CLASSES
+    permission_classes = [ProjectUsersOnly, ] + DEFAULT_PERMISSION_CLASSES
     pagination_class = DefaultPagination
 
     def get_queryset(self):
@@ -163,6 +174,7 @@ class ProjectTeamViewSet(ModelViewSet):
 
 class ProjectTeamUsersViewSet(ModelViewSet):
     serializer_class = TeamUserSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return User.objects.filter(project_teams__id=self.kwargs['team_pk'])
@@ -185,14 +197,14 @@ class ProjectTeamUsersViewSet(ModelViewSet):
         try:
             team = Team.objects.get(id=self.kwargs['team_pk'])
         except Team.DoesNotExist:
-            return Response('추가하려는 팀이 존재하지 않습니다.', status=404)
+            return Response('삭제하려는 팀이 존재하지 않습니다.', status=404)
 
         team.users.remove(user)
         return Response(TeamUserSerializer(team.users, many=True).data)
 
 
 class ProjectIssueViewSet(ModelViewSet):
-    permission_classes = [ProjectUsersOnly]+DEFAULT_PERMISSION_CLASSES
+    permission_classes = [ProjectUsersOnly] + DEFAULT_PERMISSION_CLASSES
     HISTORY_PAGINATION_SIZE = 10
 
     def get_queryset(self):
@@ -353,7 +365,7 @@ class ProjectCommentViewSet(ModelViewSet):
 class AttachmentViewSet(ModelViewSet):
     serializer_class = AttachmentSerializer
     pagination_class = DefaultPagination
-    permission_classes = [ProjectUsersOnly]+DEFAULT_PERMISSION_CLASSES
+    permission_classes = [ProjectUsersOnly] + DEFAULT_PERMISSION_CLASSES
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):

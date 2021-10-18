@@ -44,7 +44,7 @@ class Participation(models.Model):
 
 
 class Team(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, related_name='teams')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='teams')
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='project_teams', blank=True)
     name = models.CharField(max_length=128)
 

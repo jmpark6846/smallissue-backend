@@ -21,7 +21,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer()
+    profile = ProfileSerializer(read_only=True)
     is_readonly = serializers.SerializerMethodField()
 
     class Meta:

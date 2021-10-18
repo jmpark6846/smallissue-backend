@@ -16,8 +16,7 @@ class ProjectUsersOnly(BasePermission):
         elif isinstance(obj, Attachment):
                 return obj.project.users.filter(id=request.user.id).exists()
         elif isinstance(obj, Participation):
-            return obj.project.filter(users__id=request.user.id).exists()
-
+            return obj.project.users.filter(id=request.user.id).exists()
         elif isinstance(obj, Project):
             return obj.users.filter(id=request.user.id).exists()
 
@@ -29,7 +28,7 @@ class ProjectLeaderOnly(BasePermission):
         if isinstance(obj, Participation):
             return obj.project.leader.id == request.user.id
         else:
-            return obj.leader == request.user
+            return obj.leader.id == request.user.id
 
 
 class IsAuthorOnly(BasePermission):

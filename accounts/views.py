@@ -280,11 +280,11 @@ class ProfileView(DjangoGroupCompatibleAPIView):
         data = ProfileSerializer(request.user.profile, context={"request": request}).data
         return Response(data, status=200)
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         serializer = ProfileSerializer(request.user.profile, data=request.data)
         if serializer.is_valid():
             serializer.save()
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

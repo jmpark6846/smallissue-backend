@@ -16,7 +16,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         try:
-            user = User.objects.get(pk=data['leader'])
+            user = User.objects.get(pk=data['leader']['id'])
         except User.DoesNotExist:
             raise ValueError('user does not exist')
 
@@ -79,7 +79,7 @@ class ProjectParticipationSerializer(serializers.ModelSerializer):
 
 
 class TeamSerializer(serializers.ModelSerializer):
-    users = ProjectUserSerializer(many=True)
+    users = ProjectUserSerializer(many=True, read_only=True)
 
     class Meta:
         model = Team
