@@ -80,7 +80,8 @@ class Issue(BaseModel):
 
 def generate_key(sender, instance, created, **kwargs):
     if created:
-        instance.key = instance.project.key + '-' + str(instance.id)
+        key_num = Issue.objects.filter(project=instance.project).count()
+        instance.key = instance.project.key + '-' + str(key_num)
         instance.save()
 
 
