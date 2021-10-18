@@ -41,7 +41,6 @@ class ProjectViewSet(ModelViewSet):
             permission_classes = [IsAdminUser]
 
         permission_classes += DEFAULT_PERMISSION_CLASSES
-        print(permission_classes)
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):

@@ -16,7 +16,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         try:
-            user = User.objects.get(pk=data['leader']['id'])
+            user = User.objects.get(pk=data['leader'])
         except User.DoesNotExist:
             raise ValueError('user does not exist')
 
